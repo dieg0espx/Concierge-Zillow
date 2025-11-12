@@ -198,7 +198,7 @@ export default function PropertyListingPage() {
           <div className="bg-card/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 md:p-8 border border-border/30">
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-8 mb-6 sm:mb-8">
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white mb-3 sm:mb-4 break-words font-normal">
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-white mb-3 sm:mb-4 break-words font-normal">
                   {property.address}
                 </h1>
                 <div className="flex items-start gap-2 text-white/70 mb-2 text-sm sm:text-base">
@@ -207,7 +207,7 @@ export default function PropertyListingPage() {
                 </div>
               </div>
               <div className="text-left sm:text-right w-full sm:w-auto">
-                <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white mb-1 sm:mb-2">
+                <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white mb-1 sm:mb-2">
                   {formatCurrency(property.monthly_rent)}
                 </div>
                 <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Monthly Rent</div>
@@ -220,21 +220,21 @@ export default function PropertyListingPage() {
                 <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
                   <Bed className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                 </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-1">{property.bedrooms}</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-1">{property.bedrooms}</div>
                 <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Bedrooms</div>
               </div>
               <div className="text-center p-4 sm:p-5 md:p-6 bg-background/30 rounded-xl border border-border/30 backdrop-blur-sm hover:bg-background/40 transition-all">
                 <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
                   <Bath className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                 </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-1">{property.bathrooms}</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-1">{property.bathrooms}</div>
                 <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Bathrooms</div>
               </div>
               <div className="text-center p-4 sm:p-5 md:p-6 bg-background/30 rounded-xl border border-border/30 backdrop-blur-sm hover:bg-background/40 transition-all">
                 <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
                   <Square className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                 </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-1">{formatNumber(property.area)} sq ft</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-1">{formatNumber(property.area)} sq ft</div>
                 <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Area</div>
               </div>
             </div>

@@ -15,7 +15,7 @@ export default async function UsersPage() {
           <div className="p-2 bg-white/10 rounded-lg">
             <Users className="h-6 w-6 text-white" />
           </div>
-          <h1 className="luxury-heading text-4xl font-bold tracking-[0.15em] text-white">
+          <h1 className="luxury-heading text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.15em] text-white">
             USER MANAGEMENT
           </h1>
         </div>

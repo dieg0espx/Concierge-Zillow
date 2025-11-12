@@ -205,7 +205,7 @@ export default function EditPropertyPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="luxury-heading text-5xl font-bold tracking-[0.15em] mb-3 text-white">
+            <h1 className="luxury-heading text-3xl sm:text-4xl md:text-5xl font-bold tracking-[0.15em] mb-3 text-white">
               Edit Property
             </h1>
             <p className="text-white/70 mt-2 tracking-wide text-lg">

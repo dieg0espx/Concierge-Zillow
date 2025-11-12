@@ -66,7 +66,7 @@ export default async function ManagerPropertiesPage({
 
               {/* Manager Info */}
               <div className="flex-1">
-                <h1 className="luxury-heading text-4xl font-bold tracking-[0.15em] text-white mb-4">
+                <h1 className="luxury-heading text-2xl sm:text-3xl md:text-4xl font-bold tracking-[0.15em] text-white mb-4">
                   {manager.name}
                 </h1>
                 <div className="flex flex-col gap-3 text-white/80">

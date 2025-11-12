@@ -90,7 +90,7 @@ export default async function HomePage() {
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 sm:px-6 max-w-7xl mx-auto">
           {/* Main Heading */}
-          <h1 className="luxury-heading text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-bold text-white mb-8 animate-reveal leading-tight" style={{
+          <h1 className="luxury-heading text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 animate-reveal leading-tight" style={{
             animationDelay: '400ms',
             textShadow: '0 0 80px rgba(255,255,255,0.1)'
           }}>
@@ -116,7 +116,7 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
         <div className="text-center mb-20">
           <Badge className="badge-accent text-sm px-6 py-2 mb-6">Featured Properties</Badge>
-          <h2 className="luxury-heading text-5xl sm:text-6xl font-bold text-white tracking-widest mb-6">
+          <h2 className="luxury-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-widest mb-6">
             EXCEPTIONAL PROPERTIES
           </h2>
           <div className="h-1 w-32 mx-auto divider-accent mb-8"></div>

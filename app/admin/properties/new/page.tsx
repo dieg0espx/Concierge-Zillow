@@ -245,7 +245,7 @@ export default function AddPropertyPage() {
             <Sparkles className="h-8 w-8 text-white" />
           </div>
           <div>
-            <h1 className="luxury-heading text-5xl font-bold tracking-[0.15em] text-white">
+            <h1 className="luxury-heading text-3xl sm:text-4xl md:text-5xl font-bold tracking-[0.15em] text-white">
               Add New Property
             </h1>
             <p className="text-white/70 mt-2 tracking-wide text-lg">

@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Home, MapPin, BedDouble, Bath, Maximize, ExternalLink, Pencil, Plus, Search } from "lucide-react"
+import { Home, MapPin, BedDouble, Bath, Maximize, ExternalLink, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { getProperties, Property as SupabaseProperty } from "@/lib/supabase"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { PropertyManager } from "@/components/property-manager-select"
 import { formatCurrency, formatNumber } from "@/lib/utils"
+import { deleteProperty } from "@/lib/actions/properties"
 
 interface Property {
   id: string
@@ -30,6 +31,7 @@ export default function AllPropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -106,6 +108,24 @@ export default function AllPropertiesPage() {
       return false
     })
   }, [properties, searchQuery])
+
+  const handleDelete = async (propertyId: string, address: string) => {
+    if (!confirm(`Are you sure you want to delete "${address}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setDeletingId(propertyId)
+    const result = await deleteProperty(propertyId)
+
+    if (result.error) {
+      alert(`Failed to delete property: ${result.error}`)
+      setDeletingId(null)
+    } else {
+      // Remove property from local state
+      setProperties(prev => prev.filter(p => p.id !== propertyId))
+      setDeletingId(null)
+    }
+  }
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -298,6 +318,15 @@ export default function AllPropertiesPage() {
                           </a>
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDelete(property.id, property.address)}
+                        disabled={deletingId === property.id}
+                        className="w-full sm:w-auto border-red-500/40 hover:bg-red-500 hover:text-white hover:border-red-500 text-red-400 transition-all h-10 sm:h-11 text-sm sm:text-base"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        {deletingId === property.id ? 'Deleting...' : 'Delete'}
+                      </Button>
                     </div>
                   </div>
                 </div>

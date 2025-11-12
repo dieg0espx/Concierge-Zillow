@@ -90,3 +90,26 @@ export async function assignPropertyToManagers(propertyId: string, managerIds: s
 
   return { success: true }
 }
+
+export async function deleteProperty(propertyId: string) {
+  const supabase = await createClient()
+
+  // First, delete all assignments for this property
+  await supabase
+    .from('property_manager_assignments')
+    .delete()
+    .eq('property_id', propertyId)
+
+  // Then delete the property itself
+  const { error } = await supabase
+    .from('properties')
+    .delete()
+    .eq('id', propertyId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/properties')
+  return { success: true }
+}

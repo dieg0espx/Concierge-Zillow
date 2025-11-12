@@ -33,11 +33,11 @@ export function ManagerUrlDisplay({ managerId }: { managerId: string }) {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-3">
       <Input
         value={url}
         readOnly
-        className="font-mono text-sm"
+        className="font-mono text-sm bg-white/5 border-white/30 text-white/90 focus:border-white h-12 px-4"
         onClick={(e) => e.currentTarget.select()}
       />
       <Button
@@ -45,11 +45,12 @@ export function ManagerUrlDisplay({ managerId }: { managerId: string }) {
         size="icon"
         onClick={handleCopy}
         title="Copy URL"
+        className="h-12 w-12 border-white/30 hover:bg-white/10 hover:border-white text-white flex-shrink-0"
       >
         {copied ? (
-          <Check className="h-4 w-4 text-green-600" />
+          <Check className="h-5 w-5 text-green-400" />
         ) : (
-          <Copy className="h-4 w-4" />
+          <Copy className="h-5 w-5" />
         )}
       </Button>
     </div>

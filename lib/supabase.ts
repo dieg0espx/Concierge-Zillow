@@ -14,6 +14,7 @@ export interface Property {
   area: string | null
   zillow_url: string
   images: string[]
+  description: string | null
   scraped_at: string | null
   created_at: string | null
   updated_at: string | null
@@ -45,7 +46,15 @@ export async function getPropertyById(id: string) {
     return null
   }
 
-  return data as Property
+  // Fetch property managers
+  const { data: assignments } = await supabase
+    .from('property_manager_assignments')
+    .select('manager_id, property_managers(id, name, email, phone, profile_picture_url)')
+    .eq('property_id', id)
+
+  const managers = assignments?.map((a: any) => a.property_managers).filter(Boolean) || []
+
+  return { ...data, managers } as Property & { managers: any[] }
 }
 
 export async function saveProperty(propertyData: {
@@ -56,7 +65,10 @@ export async function saveProperty(propertyData: {
   bathrooms?: string
   area?: string
   images?: string[]
+  description?: string
 }) {
+  console.log('saveProperty called with:', propertyData)
+
   const { data, error } = await supabase
     .from('properties')
     .insert([propertyData])
@@ -65,8 +77,15 @@ export async function saveProperty(propertyData: {
 
   if (error) {
     console.error('Error saving property:', error)
+    console.error('Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    })
     throw error
   }
 
+  console.log('Property saved successfully:', data)
   return data as Property
 }

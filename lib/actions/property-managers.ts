@@ -8,6 +8,7 @@ export type PropertyManager = {
   name: string
   email: string
   phone: string | null
+  profile_picture_url: string | null
   created_at: string
   updated_at: string
 }

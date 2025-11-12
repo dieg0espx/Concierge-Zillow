@@ -5,6 +5,7 @@
 /.pnp
 .pnp.js
 .pnp.cjs
+pnpm-lock.yaml
 
 # testing
 /coverage
@@ -27,10 +28,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 # local env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env
+.env*.local
 
 # vercel
 .vercel
@@ -38,5 +37,32 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase
 supabase
 .supabase
+
+# IDE and development tools
+.vscode/
+.idea/
+.claude/
+
+# development only
+bmad/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python (if any scraping scripts are added later)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# SQL dumps and development database files
+*.sql
+!supabase/migrations/*.sql

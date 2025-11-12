@@ -1,0 +1,484 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Home, ArrowLeft, Save, Loader2, X, Plus } from "lucide-react"
+import { PropertyManagerSelect, PropertyManager } from "@/components/property-manager-select"
+import { assignPropertyToManagers } from "@/lib/actions/properties"
+import { createClient } from "@/lib/supabase/client"
+import Link from "next/link"
+
+interface PropertyFormData {
+  address: string
+  monthly_rent: string
+  bedrooms: string
+  bathrooms: string
+  area: string
+  zillow_url: string
+  description: string | null
+  images: string[]
+}
+
+export default function EditPropertyPage() {
+  const router = useRouter()
+  const params = useParams()
+  const propertyId = params.id as string
+
+  const [formData, setFormData] = useState<PropertyFormData>({
+    address: "",
+    monthly_rent: "",
+    bedrooms: "",
+    bathrooms: "",
+    area: "",
+    zillow_url: "",
+    description: "",
+    images: []
+  })
+  const [newImageUrl, setNewImageUrl] = useState("")
+  const [propertyManagers, setPropertyManagers] = useState<PropertyManager[]>([])
+  const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true)
+      const supabase = createClient()
+
+      // Load property data
+      const { data: property, error: propError } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', propertyId)
+        .single()
+
+      if (propError || !property) {
+        setError("Failed to load property")
+        setIsLoading(false)
+        return
+      }
+
+      setFormData({
+        address: property.address || "",
+        monthly_rent: property.monthly_rent || "",
+        bedrooms: property.bedrooms || "",
+        bathrooms: property.bathrooms || "",
+        area: property.area || "",
+        zillow_url: property.zillow_url || "",
+        description: property.description || "",
+        images: Array.isArray(property.images) ? property.images : []
+      })
+
+      // Load all property managers
+      const { data: managers } = await supabase
+        .from('property_managers')
+        .select('id, name, email')
+        .order('name')
+
+      if (managers) {
+        setPropertyManagers(managers)
+      }
+
+      // Load current manager assignments
+      const { data: assignments } = await supabase
+        .from('property_manager_assignments')
+        .select('manager_id')
+        .eq('property_id', propertyId)
+
+      if (assignments) {
+        setSelectedManagerIds(assignments.map(a => a.manager_id))
+      }
+
+      setIsLoading(false)
+    }
+
+    loadData()
+  }, [propertyId])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleAddImage = () => {
+    if (newImageUrl.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, newImageUrl.trim()]
+      }))
+      setNewImageUrl("")
+    }
+  }
+
+  const handleRemoveImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    setError("")
+
+    try {
+      const supabase = createClient()
+
+      // Update property
+      const { error: updateError } = await supabase
+        .from('properties')
+        .update({
+          address: formData.address,
+          monthly_rent: formData.monthly_rent,
+          bedrooms: formData.bedrooms,
+          bathrooms: formData.bathrooms,
+          area: formData.area,
+          zillow_url: formData.zillow_url,
+          description: formData.description || null,
+          images: formData.images
+        })
+        .eq('id', propertyId)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      // Update manager assignments
+      await assignPropertyToManagers(propertyId, selectedManagerIds)
+
+      // Redirect back to properties list
+      router.push('/admin/properties')
+    } catch (err) {
+      console.error('Error updating property:', err)
+      setError(err instanceof Error ? err.message : 'Failed to update property')
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-12 w-12 animate-spin text-white mb-4" />
+        <span className="tracking-wide text-xl text-white/70">Loading property...</span>
+      </div>
+    )
+  }
+
+  if (error && !formData.address) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center gap-4 mb-8">
+          <Link href="/admin/properties">
+            <Button variant="ghost" className="text-white hover:text-white/80">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to Properties
+            </Button>
+          </Link>
+        </div>
+        <Card className="glass-card-accent p-16 text-center elevated-card">
+          <h3 className="luxury-heading text-3xl font-semibold mb-4 tracking-[0.15em] text-white">
+            Error Loading Property
+          </h3>
+          <p className="text-white/70 tracking-wide text-lg">{error}</p>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-6">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/properties">
+            <Button variant="ghost" className="text-white hover:text-white/80">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="luxury-heading text-5xl font-bold tracking-[0.15em] mb-3 text-white">
+              Edit Property
+            </h1>
+            <p className="text-white/70 mt-2 tracking-wide text-lg">
+              Update property details and assignments
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-px divider-accent my-8" />
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Information */}
+        <Card className="glass-card-accent elevated-card">
+          <CardHeader>
+            <CardTitle className="luxury-heading text-3xl tracking-[0.15em] text-white">
+              <Home className="inline-block h-7 w-7 mr-3" />
+              Property Information
+            </CardTitle>
+            <CardDescription className="text-white/70 text-base tracking-wide">
+              Edit the basic details of this property
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Address */}
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                Property Address *
+              </Label>
+              <Input
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="123 Main St, City, State 12345"
+                required
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+              />
+            </div>
+
+            {/* Monthly Rent */}
+            <div className="space-y-2">
+              <Label htmlFor="monthly_rent" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                Monthly Rent *
+              </Label>
+              <Input
+                id="monthly_rent"
+                name="monthly_rent"
+                value={formData.monthly_rent}
+                onChange={handleInputChange}
+                placeholder="2500"
+                required
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+              />
+            </div>
+
+            {/* Property Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="bedrooms" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                  Bedrooms
+                </Label>
+                <Input
+                  id="bedrooms"
+                  name="bedrooms"
+                  value={formData.bedrooms}
+                  onChange={handleInputChange}
+                  placeholder="3"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bathrooms" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                  Bathrooms
+                </Label>
+                <Input
+                  id="bathrooms"
+                  name="bathrooms"
+                  value={formData.bathrooms}
+                  onChange={handleInputChange}
+                  placeholder="2"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="area" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                  Area (sq ft)
+                </Label>
+                <Input
+                  id="area"
+                  name="area"
+                  value={formData.area}
+                  onChange={handleInputChange}
+                  placeholder="1500"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+                />
+              </div>
+            </div>
+
+            {/* Zillow URL */}
+            <div className="space-y-2">
+              <Label htmlFor="zillow_url" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                Zillow URL
+              </Label>
+              <Input
+                id="zillow_url"
+                name="zillow_url"
+                value={formData.zillow_url}
+                onChange={handleInputChange}
+                placeholder="https://www.zillow.com/..."
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description || ""}
+                onChange={handleInputChange}
+                placeholder="Enter property description..."
+                rows={6}
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 resize-none"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Images */}
+        <Card className="glass-card-accent elevated-card">
+          <CardHeader>
+            <CardTitle className="luxury-heading text-3xl tracking-[0.15em] text-white">
+              Property Images
+            </CardTitle>
+            <CardDescription className="text-white/70 text-base tracking-wide">
+              Manage property image URLs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Add Image */}
+            <div className="space-y-2">
+              <Label className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                Add Image URL
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddImage()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddImage}
+                  className="bg-white text-black hover:bg-white/90"
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Current Images */}
+            {formData.images.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-white/90 uppercase tracking-wide text-sm font-semibold">
+                  Current Images ({formData.images.length})
+                </Label>
+                <div className="grid grid-cols-1 gap-3">
+                  {formData.images.map((imageUrl, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 glass-card-accent rounded-lg"
+                    >
+                      <div className="w-20 h-20 flex-shrink-0 bg-white/5 rounded overflow-hidden">
+                        <img
+                          src={imageUrl}
+                          alt={`Property image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/70 text-sm truncate">{imageUrl}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveImage(index)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
+                        <X className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Property Managers */}
+        <Card className="glass-card-accent elevated-card">
+          <CardHeader>
+            <CardTitle className="luxury-heading text-3xl tracking-[0.15em] text-white">
+              Property Managers
+            </CardTitle>
+            <CardDescription className="text-white/70 text-base tracking-wide">
+              Assign managers to this property
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PropertyManagerSelect
+              managers={propertyManagers}
+              selectedManagerIds={selectedManagerIds}
+              onSelectionChange={setSelectedManagerIds}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Error Message */}
+        {error && (
+          <Card className="glass-card-accent border-red-500/30 bg-red-500/10">
+            <CardContent className="p-6">
+              <p className="text-red-400">{error}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-4 justify-end pt-6 border-t border-white/10">
+          <Link href="/admin/properties">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-white/40 hover:bg-white/10 text-white px-8 py-6 text-base"
+            >
+              Cancel
+            </Button>
+          </Link>
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="btn-luxury px-8 py-6 text-base"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Saving Changes...
+              </>
+            ) : (
+              <>
+                <Save className="h-5 w-5 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}

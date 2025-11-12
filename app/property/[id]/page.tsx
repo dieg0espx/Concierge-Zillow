@@ -5,6 +5,7 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 import {
   Home,
   MapPin,
@@ -19,6 +20,16 @@ import {
 import { Logo } from "@/components/logo"
 import Link from "next/link"
 import { getPropertyById, Property as SupabaseProperty } from "@/lib/supabase"
+import { formatCurrency, formatNumber } from "@/lib/utils"
+import { PropertyContactForm } from "@/components/property-contact-form"
+
+interface PropertyManager {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  profile_picture_url?: string
+}
 
 interface Property {
   id: string
@@ -29,8 +40,10 @@ interface Property {
   area: string
   zillow_url: string
   images: string[]
+  description: string | null
   scraped_at: string | null
   created_at: string | null
+  managers?: PropertyManager[]
 }
 
 export default function PropertyListingPage() {
@@ -39,6 +52,7 @@ export default function PropertyListingPage() {
   const [property, setProperty] = useState<Property | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const { toast } = useToast()
 
   useEffect(() => {
     async function loadProperty() {
@@ -57,8 +71,10 @@ export default function PropertyListingPage() {
           area: data.area || "0",
           zillow_url: data.zillow_url,
           images: Array.isArray(data.images) ? data.images : [],
+          description: data.description || null,
           scraped_at: data.scraped_at,
-          created_at: data.created_at
+          created_at: data.created_at,
+          managers: (data as any).managers || []
         })
       }
       setIsLoading(false)
@@ -66,6 +82,44 @@ export default function PropertyListingPage() {
 
     loadProperty()
   }, [propertyId])
+
+  const handleShare = async () => {
+    if (!property) return
+
+    const shareData = {
+      title: `${property.address} - Luxury Property`,
+      text: `Check out this luxury property: ${property.bedrooms} bed, ${property.bathrooms} bath, ${formatNumber(property.area)} sq ft - ${formatCurrency(property.monthly_rent)}/month`,
+      url: window.location.href,
+    }
+
+    try {
+      // Try using Web Share API (mobile/modern browsers)
+      if (navigator.share) {
+        await navigator.share(shareData)
+        toast({
+          title: 'Shared successfully',
+          description: 'Property link has been shared',
+        })
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(window.location.href)
+        toast({
+          title: 'Link copied!',
+          description: 'Property URL has been copied to clipboard',
+        })
+      }
+    } catch (error) {
+      // User cancelled or error occurred
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error sharing:', error)
+        toast({
+          title: 'Unable to share',
+          description: 'Please try copying the URL manually',
+          variant: 'destructive',
+        })
+      }
+    }
+  }
 
   const nextImage = () => {
     if (!property) return
@@ -123,7 +177,12 @@ export default function PropertyListingPage() {
               </div>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <Button variant="outline" size="sm" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-sm text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-sm text-xs"
+              >
                 <Share2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="luxury-heading tracking-wider text-xs hidden sm:inline">Share</span>
               </Button>
@@ -149,7 +208,7 @@ export default function PropertyListingPage() {
               </div>
               <div className="text-left sm:text-right w-full sm:w-auto">
                 <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white mb-1 sm:mb-2">
-                  ${property.monthly_rent}
+                  {formatCurrency(property.monthly_rent)}
                 </div>
                 <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Monthly Rent</div>
               </div>
@@ -175,7 +234,7 @@ export default function PropertyListingPage() {
                 <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
                   <Square className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
                 </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-1">{property.area}</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-1">{formatNumber(property.area)} sq ft</div>
                 <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Area</div>
               </div>
             </div>
@@ -262,6 +321,18 @@ export default function PropertyListingPage() {
           </Card>
         )}
 
+        {/* Property Description */}
+        {property.description && (
+          <Card className="bg-card/50 border border-border/30 backdrop-blur-sm mb-6 sm:mb-8">
+            <CardContent className="p-4 sm:p-6 md:p-8">
+              <h2 className="luxury-heading text-xl sm:text-2xl text-white mb-4 sm:mb-6">About This Property</h2>
+              <p className="text-white/90 text-base sm:text-lg leading-relaxed">
+                {property.description}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Property Details */}
         <Card className="bg-card/50 border border-border/30 backdrop-blur-sm">
           <CardContent className="p-4 sm:p-6 md:p-8">
@@ -273,7 +344,7 @@ export default function PropertyListingPage() {
               </div>
               <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
                 <span className="text-white/80 font-medium">Monthly Rent</span>
-                <span className="font-semibold text-white">${property.monthly_rent}</span>
+                <span className="font-semibold text-white">{formatCurrency(property.monthly_rent)}</span>
               </div>
               <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
                 <span className="text-white/80 font-medium">Bedrooms</span>
@@ -285,7 +356,7 @@ export default function PropertyListingPage() {
               </div>
               <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
                 <span className="text-white/80 font-medium">Area</span>
-                <span className="font-semibold text-white">{property.area}</span>
+                <span className="font-semibold text-white">{formatNumber(property.area)} sq ft</span>
               </div>
               <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
                 <span className="text-white/80 font-medium">Scraped Date</span>
@@ -293,20 +364,17 @@ export default function PropertyListingPage() {
                   {property.scraped_at ? new Date(property.scraped_at).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30 sm:col-span-2">
-                <span className="text-white/80 font-medium">Zillow Link</span>
-                <a
-                  href={property.zillow_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-white hover:text-white/80 underline"
-                >
-                  View on Zillow
-                </a>
-              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Contact Form */}
+        <div className="mt-6 sm:mt-8">
+          <PropertyContactForm
+            propertyAddress={property.address}
+            managers={property.managers || []}
+          />
+        </div>
 
         <div className="mt-6 sm:mt-8">
           <Link href="/">

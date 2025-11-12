@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { PublicPropertyCard } from '@/components/public-property-card'
 import { Logo } from '@/components/logo'
 import { Mail, Phone, Home } from 'lucide-react'
+import { formatPhoneNumber } from '@/lib/utils'
+import { ManagerContactForm } from '@/components/manager-contact-form'
 
 export default async function ManagerPublicPage({
   params,
@@ -90,7 +92,7 @@ export default async function ManagerPublicPage({
                   <div>
                     <p className="text-xs text-white/70 uppercase tracking-[0.15em] mb-1">Phone</p>
                     <a href={`tel:${manager.phone}`} className="text-white text-base hover:text-white/90 transition-colors font-medium">
-                      {manager.phone}
+                      {formatPhoneNumber(manager.phone)}
                     </a>
                   </div>
                 </div>
@@ -118,6 +120,14 @@ export default async function ManagerPublicPage({
             </div>
           </div>
         )}
+
+        {/* Contact Form Section */}
+        <div className="mt-16 sm:mt-20">
+          <h2 className="luxury-heading text-3xl font-bold mb-8 text-white tracking-[0.2em] text-center">
+            Get in Touch
+          </h2>
+          <ManagerContactForm manager={manager} />
+        </div>
       </div>
 
       {/* Footer */}
@@ -133,7 +143,7 @@ export default async function ManagerPublicPage({
               <>
                 {' '}or call{' '}
                 <a href={`tel:${manager.phone}`} className="text-white font-medium hover:text-white/90 transition-colors underline decoration-white/30 hover:decoration-white/60">
-                  {manager.phone}
+                  {formatPhoneNumber(manager.phone)}
                 </a>
               </>
             )}

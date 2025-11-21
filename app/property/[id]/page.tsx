@@ -162,16 +162,18 @@ export default function PropertyListingPage() {
   return (
     <div className="min-h-screen marble-bg">
       {/* Header */}
-      <header className="border-b border-border/20 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <header className="border-b border-white/20 backdrop-blur-md sticky top-0 z-50 glass-card-accent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-2 sm:gap-4 hover:opacity-80 transition-opacity flex-1 min-w-0">
-              <Logo />
+            <Link href="/" className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity flex-1 min-w-0">
+              <div className="shimmer">
+                <Logo />
+              </div>
               <div className="flex flex-col min-w-0">
                 <div className="luxury-heading text-base sm:text-lg md:text-xl tracking-widest text-white truncate">
-                  LUXURY CONCIERGE
+                  LUXURY LIVING
                 </div>
-                <div className="text-[10px] sm:text-xs tracking-[0.2em] text-white/70 uppercase">
+                <div className="text-[10px] sm:text-xs tracking-[0.2em] text-white/70 uppercase font-semibold">
                   Cadiz & Lluis
                 </div>
               </div>
@@ -192,198 +194,246 @@ export default function PropertyListingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 md:py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/">
+            <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10 backdrop-blur-sm -ml-2">
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back to Properties
+            </Button>
+          </Link>
+        </div>
+
         {/* Property Header */}
-        <div className="mb-6 sm:mb-8 md:mb-12">
-          <div className="bg-card/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 md:p-8 border border-border/30">
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-8 mb-6 sm:mb-8">
+        <div className="mb-8 sm:mb-10">
+          <div className="glass-card-accent elevated-card rounded-2xl p-6 sm:p-8 md:p-10 border border-white/20">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-6 lg:gap-8 mb-8">
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-white mb-3 sm:mb-4 break-words font-normal">
+                <Badge className="badge-accent mb-4">Featured Property</Badge>
+                <h1 className="luxury-heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white mb-4 break-words tracking-wide">
                   {property.address}
                 </h1>
-                <div className="flex items-start gap-2 text-white/70 mb-2 text-sm sm:text-base">
-                  <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 text-white/70 text-base sm:text-lg">
+                  <MapPin className="h-5 w-5 flex-shrink-0 mt-1" />
                   <span className="break-words">{property.address}</span>
                 </div>
               </div>
-              <div className="text-left sm:text-right w-full sm:w-auto">
-                <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-white mb-1 sm:mb-2">
-                  {formatCurrency(property.monthly_rent)}
+              <div className="text-left lg:text-right w-full lg:w-auto">
+                <div className="relative">
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full"></div>
+                  {/* Price */}
+                  <div className="relative">
+                    <div className="text-4xl sm:text-5xl md:text-6xl luxury-heading text-white mb-2 tracking-wide">
+                      {formatCurrency(property.monthly_rent)}
+                    </div>
+                    <div className="text-sm text-white/70 uppercase tracking-[0.3em] font-semibold">Per Month</div>
+                  </div>
                 </div>
-                <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Monthly Rent</div>
               </div>
             </div>
 
+            {/* Decorative divider */}
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="h-px flex-1 divider-accent"></div>
+              <div className="w-2 h-2 rounded-full bg-white/60"></div>
+              <div className="h-px flex-1 divider-accent"></div>
+            </div>
+
             {/* Property Stats */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-              <div className="text-center p-4 sm:p-5 md:p-6 bg-background/30 rounded-xl border border-border/30 backdrop-blur-sm hover:bg-background/40 transition-all">
-                <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
-                  <Bed className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div className="glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-4 p-5 sm:p-6">
+                  <div className="p-3 bg-white/10 rounded-full flex-shrink-0">
+                    <Bed className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1">{property.bedrooms}</div>
+                    <div className="text-xs text-white/70 uppercase tracking-[0.2em] font-semibold">Bedrooms</div>
+                  </div>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-1">{property.bedrooms}</div>
-                <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Bedrooms</div>
               </div>
-              <div className="text-center p-4 sm:p-5 md:p-6 bg-background/30 rounded-xl border border-border/30 backdrop-blur-sm hover:bg-background/40 transition-all">
-                <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
-                  <Bath className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
+              <div className="glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-4 p-5 sm:p-6">
+                  <div className="p-3 bg-white/10 rounded-full flex-shrink-0">
+                    <Bath className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1">{property.bathrooms}</div>
+                    <div className="text-xs text-white/70 uppercase tracking-[0.2em] font-semibold">Bathrooms</div>
+                  </div>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-1">{property.bathrooms}</div>
-                <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Bathrooms</div>
               </div>
-              <div className="text-center p-4 sm:p-5 md:p-6 bg-background/30 rounded-xl border border-border/30 backdrop-blur-sm hover:bg-background/40 transition-all">
-                <div className="p-2 sm:p-3 bg-white/10 rounded-full w-fit mx-auto mb-2 sm:mb-3">
-                  <Square className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
+              <div className="glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                <div className="flex items-center gap-4 p-5 sm:p-6">
+                  <div className="p-3 bg-white/10 rounded-full flex-shrink-0">
+                    <Square className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-3xl sm:text-4xl font-bold text-white mb-1">{formatNumber(property.area)}</div>
+                    <div className="text-xs text-white/70 uppercase tracking-[0.2em] font-semibold">Square Feet</div>
+                  </div>
                 </div>
-                <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-1">{formatNumber(property.area)} sq ft</div>
-                <div className="text-xs sm:text-sm text-white/70 uppercase tracking-wider">Area</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Property Images Slideshow */}
+        {/* Property Images Gallery */}
         {property.images.length > 0 && (
-          <Card className="bg-card/50 border border-border/30 backdrop-blur-sm overflow-hidden mb-6 sm:mb-8">
-            <CardContent className="p-0 relative group">
-              <div className="aspect-video bg-background/40 marble-bg flex items-center justify-center relative overflow-hidden">
-                <img
-                  src={property.images[currentImageIndex]}
-                  alt={`${property.address} - Image ${currentImageIndex + 1}`}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement
-                    fallback?.classList.remove('hidden')
-                  }}
-                />
-                <div className="text-center relative z-10 px-4 hidden">
-                  <div className="p-3 sm:p-4 bg-white/10 backdrop-blur-sm rounded-full mb-3 sm:mb-4 w-fit mx-auto">
-                    <Home className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-white" />
-                  </div>
-                  <p className="text-white font-semibold text-sm sm:text-base md:text-lg">Property Image {currentImageIndex + 1}</p>
+          <div className="mb-8 sm:mb-10">
+            <Card className="glass-card-accent elevated-card border border-white/20 overflow-hidden p-0">
+              <div className="relative group/gallery">
+                <div className="aspect-[16/10] bg-background/40 marble-bg relative overflow-hidden">
+                  <img
+                    src={property.images[currentImageIndex]}
+                    alt={`${property.address} - Image ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover transition-opacity duration-500"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+
+                  {/* Navigation Arrows */}
+                  {property.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={prevImage}
+                        className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 sm:p-3 transition-all z-10 sm:opacity-0 sm:group-hover/gallery:opacity-100"
+                      >
+                        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </button>
+                      <button
+                        onClick={nextImage}
+                        className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 sm:p-3 transition-all z-10 sm:opacity-0 sm:group-hover/gallery:opacity-100"
+                      >
+                        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Image Counter */}
+                  {property.images.length > 1 && (
+                    <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-lg text-sm font-semibold border border-white/20">
+                      {currentImageIndex + 1} / {property.images.length}
+                    </div>
+                  )}
                 </div>
 
-                {/* Navigation Arrows */}
+                {/* Thumbnail Navigation */}
                 {property.images.length > 1 && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 p-2"
-                      onClick={prevImage}
-                    >
-                      <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 p-2"
-                      onClick={nextImage}
-                    >
-                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </>
-                )}
-
-                {/* Image Counter */}
-                {property.images.length > 1 && (
-                  <div className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 bg-white/20 backdrop-blur-sm text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-white/30">
-                    {currentImageIndex + 1} / {property.images.length}
+                  <div className="p-4 sm:p-6 bg-background/20 border-t border-white/10">
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                      {property.images.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 rounded-lg border-2 transition-all duration-300 transform hover:scale-110 overflow-hidden ${
+                            index === currentImageIndex
+                              ? 'border-white shadow-lg scale-110'
+                              : 'border-white/30 hover:border-white/60'
+                          }`}
+                        >
+                          <img
+                            src={image}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Thumbnail Navigation */}
-              {property.images.length > 1 && (
-                <div className="p-3 sm:p-4 md:p-6 bg-background/30 border-t border-border/30">
-                  <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2">
-                    {property.images.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentImageIndex(index)}
-                        className={`flex-shrink-0 w-16 h-12 sm:w-20 sm:h-16 rounded-xl border-2 transition-all duration-200 transform hover:scale-105 overflow-hidden ${
-                          index === currentImageIndex
-                            ? 'border-white shadow-lg ring-2 ring-white/30'
-                            : 'border-white/30 hover:border-white/50 hover:shadow-md'
-                        }`}
-                      >
-                        <img
-                          src={image}
-                          alt={`Thumbnail ${index + 1}`}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </Card>
+          </div>
         )}
 
         {/* Property Description */}
         {property.description && (
-          <Card className="bg-card/50 border border-border/30 backdrop-blur-sm mb-6 sm:mb-8">
-            <CardContent className="p-4 sm:p-6 md:p-8">
-              <h2 className="luxury-heading text-xl sm:text-2xl text-white mb-4 sm:mb-6">About This Property</h2>
-              <p className="text-white/90 text-base sm:text-lg leading-relaxed">
-                {property.description}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="mb-8 sm:mb-10">
+            <Card className="glass-card-accent elevated-card border border-white/20">
+              <CardContent className="p-6 sm:p-8 md:p-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-1 w-12 divider-accent"></div>
+                  <h2 className="luxury-heading text-2xl sm:text-3xl text-white tracking-wide">About This Property</h2>
+                </div>
+                <p className="text-white/90 text-base sm:text-lg leading-relaxed">
+                  {property.description}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Property Details */}
-        <Card className="bg-card/50 border border-border/30 backdrop-blur-sm">
-          <CardContent className="p-4 sm:p-6 md:p-8">
-            <h2 className="luxury-heading text-xl sm:text-2xl text-white mb-4 sm:mb-6">Property Details</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
-                <span className="text-white/80 font-medium">Address</span>
-                <span className="font-semibold text-white text-right ml-4">{property.address}</span>
+        <div className="mb-8 sm:mb-10">
+          <Card className="glass-card-accent elevated-card border border-white/20">
+            <CardContent className="p-6 sm:p-8 md:p-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-1 w-12 divider-accent"></div>
+                <h2 className="luxury-heading text-2xl sm:text-3xl text-white tracking-wide">Property Details</h2>
               </div>
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
-                <span className="text-white/80 font-medium">Monthly Rent</span>
-                <span className="font-semibold text-white">{formatCurrency(property.monthly_rent)}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                  <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Address</span>
+                  <span className="font-bold text-white text-right ml-4">{property.address}</span>
+                </div>
+                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                  <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Monthly Rent</span>
+                  <span className="font-bold text-white text-lg">{formatCurrency(property.monthly_rent)}</span>
+                </div>
+                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                  <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Bedrooms</span>
+                  <span className="font-bold text-white text-lg">{property.bedrooms}</span>
+                </div>
+                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                  <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Bathrooms</span>
+                  <span className="font-bold text-white text-lg">{property.bathrooms}</span>
+                </div>
+                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300 sm:col-span-2">
+                  <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Area</span>
+                  <span className="font-bold text-white text-lg">{formatNumber(property.area)} sq ft</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
-                <span className="text-white/80 font-medium">Bedrooms</span>
-                <span className="font-semibold text-white">{property.bedrooms}</span>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Location Map */}
+        <div className="mb-8 sm:mb-10">
+          <Card className="glass-card-accent elevated-card border border-white/20">
+            <CardContent className="p-6 sm:p-8 md:p-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-1 w-12 divider-accent"></div>
+                <h2 className="luxury-heading text-2xl sm:text-3xl text-white tracking-wide">Location</h2>
               </div>
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
-                <span className="text-white/80 font-medium">Bathrooms</span>
-                <span className="font-semibold text-white">{property.bathrooms}</span>
+              <div className="rounded-xl overflow-hidden border border-white/20">
+                <iframe
+                  width="100%"
+                  height="450"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(property.address)}&output=embed`}
+                  className="w-full"
+                ></iframe>
               </div>
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
-                <span className="text-white/80 font-medium">Area</span>
-                <span className="font-semibold text-white">{formatNumber(property.area)} sq ft</span>
+              <div className="mt-4 flex items-start gap-2 text-white/70 text-sm">
+                <MapPin className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <span>{property.address}</span>
               </div>
-              <div className="flex justify-between items-center p-4 bg-background/30 rounded-lg border border-border/30">
-                <span className="text-white/80 font-medium">Scraped Date</span>
-                <span className="font-semibold text-white">
-                  {property.scraped_at ? new Date(property.scraped_at).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Contact Form */}
-        <div className="mt-6 sm:mt-8">
-          <PropertyContactForm
-            propertyAddress={property.address}
-            managers={property.managers || []}
-          />
-        </div>
-
-        <div className="mt-6 sm:mt-8">
-          <Link href="/">
-            <Button variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-sm">
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Back to All Properties
-            </Button>
-          </Link>
-        </div>
+        <PropertyContactForm
+          propertyAddress={property.address}
+          managers={property.managers || []}
+        />
       </main>
     </div>
   )

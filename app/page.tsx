@@ -23,7 +23,7 @@ export default async function HomePage() {
     <div className="min-h-screen marble-bg">
       {/* Enhanced Header */}
       <header className="border-b border-white/20 backdrop-blur-md sticky top-0 z-50 glass-card-accent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center justify-center">
             {/* Logo and Brand */}
             <div className="flex items-center gap-4 sm:gap-5">

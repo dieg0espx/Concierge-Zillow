@@ -3,9 +3,10 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Home, MapPin, BedDouble, Bath, Maximize } from 'lucide-react'
+import { Home, MapPin, BedDouble, Bath, Maximize, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import { useState } from 'react'
 
 type Property = {
   id: string
@@ -19,34 +20,70 @@ type Property = {
 }
 
 export function PublicPropertyCard({ property }: { property: Property }) {
-  const firstImage = Array.isArray(property.images) && property.images.length > 0
-    ? property.images[0]
-    : null
+  const images = Array.isArray(property.images) && property.images.length > 0
+    ? property.images
+    : []
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   return (
-    <Card className="overflow-hidden elevated-card group animate-fade-in">
-      {/* Property Image */}
-      <div className="h-72 bg-background/30 relative luxury-overlay premium-image">
-        {firstImage ? (
-          <img
-            src={firstImage}
-            alt={property.address || 'Property'}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
+    <Card className="overflow-hidden elevated-card group animate-fade-in p-0">
+      {/* Property Image Gallery */}
+      <div className="h-72 bg-background/30 relative luxury-overlay premium-image group/gallery">
+        {images.length > 0 ? (
+          <>
+            <img
+              src={images[currentImageIndex]}
+              alt={`${property.address || 'Property'} - Image ${currentImageIndex + 1}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            {/* Navigation Arrows */}
+            {images.length > 1 && (
+              <>
+                {/* Left Arrow */}
+                <button
+                  onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all opacity-0 group-hover/gallery:opacity-100"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                {/* Right Arrow */}
+                <button
+                  onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all opacity-0 group-hover/gallery:opacity-100"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              </>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-background to-card">
             <Home className="h-24 w-24 text-white/20" />
           </div>
         )}
-        {/* Price Badge with White Styling */}
+        {/* Price Badge with Enhanced Luxury Styling */}
         {property.monthly_rent && (
-          <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-10">
-            <Badge className="badge-accent text-base sm:text-xl px-4 sm:px-6 py-2 sm:py-3 font-bold tracking-wide shadow-xl">
-              {formatCurrency(property.monthly_rent)}/mo
-            </Badge>
+          <div className="absolute top-4 right-4 z-10">
+            <div className="relative">
+              {/* Glow effect background */}
+              <div className="absolute inset-0 bg-white/20 blur-lg rounded-lg"></div>
+              {/* Main price container */}
+              <div className="relative backdrop-blur-md bg-gradient-to-br from-white/95 to-white/85 border border-white/30 rounded-lg shadow-xl px-3 py-2">
+                <div className="flex flex-col items-end">
+                  <span className="text-lg sm:text-xl font-bold text-black tracking-tight leading-none">
+                    {formatCurrency(property.monthly_rent)}
+                  </span>
+                  <span className="text-[10px] text-black/60 font-semibold uppercase tracking-wider mt-0.5">
+                    per month
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

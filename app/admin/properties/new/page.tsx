@@ -193,6 +193,40 @@ export default function AddPropertyPage() {
                   (propertyData.resoFacts && propertyData.resoFacts.livingArea) ||
                   "Contact for details"
 
+      // Get image URLs from Zillow
+      const zillowImageUrls = propertyData.photos || propertyData.images || []
+
+      let cloudinaryImageUrls: string[] = []
+
+      // Upload images to Cloudinary if any exist
+      if (zillowImageUrls.length > 0) {
+        try {
+          console.log(`Uploading ${zillowImageUrls.length} images to Cloudinary...`)
+          const uploadResponse = await fetch('/api/upload-images', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              imageUrls: zillowImageUrls,
+              propertyAddress: address,
+            }),
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error('Failed to upload images to Cloudinary')
+          }
+
+          const uploadData = await uploadResponse.json()
+          cloudinaryImageUrls = uploadData.urls || []
+          console.log(`Successfully uploaded ${cloudinaryImageUrls.length} images to Cloudinary`)
+        } catch (uploadError) {
+          console.error('Error uploading images to Cloudinary:', uploadError)
+          // Continue with Zillow URLs if Cloudinary upload fails
+          cloudinaryImageUrls = zillowImageUrls
+        }
+      }
+
       const newProperty = {
         address: address,
         monthly_rent: typeof rent === 'number' ? rent.toString() : rent,
@@ -200,7 +234,7 @@ export default function AddPropertyPage() {
         bathrooms: typeof bathrooms === 'number' ? bathrooms.toString() : bathrooms,
         area: typeof area === 'number' ? area.toString() : area,
         zillow_url: url.trim(),
-        images: propertyData.photos || propertyData.images || [],
+        images: cloudinaryImageUrls,
         description: propertyData.description || null
       }
 
@@ -471,7 +505,9 @@ export default function AddPropertyPage() {
                 <div className="flex items-center gap-4 text-white">
                   <div className="skeleton h-6 w-6 rounded-full"></div>
                   <span className="text-base tracking-wide font-semibold">
-                    Processing property data from Zillow...
+                    {inputMode === "scrape"
+                      ? "Processing property data from Zillow..."
+                      : "Saving property..."}
                   </span>
                 </div>
               ) : (

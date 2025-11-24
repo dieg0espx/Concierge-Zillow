@@ -44,7 +44,7 @@ export default async function HomePage() {
       </header>
 
       {/* Epic Hero Section with Parallax */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden py-20 sm:py-0">
+      <section className="relative min-h-[80vh] sm:min-h-screen flex items-center justify-center overflow-hidden py-16 sm:py-20 md:py-0">
         {/* Multiple Layer Backgrounds for Depth */}
         <div className="absolute inset-0">
           {/* Layer 1: Base gradient */}
@@ -65,9 +65,9 @@ export default async function HomePage() {
 
           {/* Layer 4: Radial gradients */}
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-            <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-white/3 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+            <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+            <div className="absolute top-1/2 left-1/2 w-32 h-32 sm:w-64 sm:h-64 bg-white/3 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
           </div>
 
           {/* Layer 5: Animated particles */}
@@ -90,7 +90,7 @@ export default async function HomePage() {
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 sm:px-6 max-w-7xl mx-auto">
           {/* Main Heading */}
-          <h1 className="luxury-heading text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 animate-reveal leading-tight" style={{
+          <h1 className="luxury-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 sm:mb-8 animate-reveal leading-tight px-4" style={{
             animationDelay: '400ms',
             textShadow: '0 0 80px rgba(255,255,255,0.1)'
           }}>
@@ -99,48 +99,48 @@ export default async function HomePage() {
           </h1>
 
           {/* Decorative line */}
-          <div className="flex items-center justify-center gap-4 mb-10 animate-fade-in" style={{ animationDelay: '600ms' }}>
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-white/50"></div>
-            <div className="w-2 h-2 rounded-full bg-white/80"></div>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-white/50"></div>
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10 animate-fade-in" style={{ animationDelay: '600ms' }}>
+            <div className="h-px w-12 sm:w-16 bg-gradient-to-r from-transparent to-white/50"></div>
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white/80"></div>
+            <div className="h-px w-12 sm:w-16 bg-gradient-to-l from-transparent to-white/50"></div>
           </div>
 
           {/* Subtitle */}
-          <p className="text-white/80 text-base sm:text-xl md:text-2xl lg:text-3xl tracking-wide max-w-4xl mx-auto mb-12 sm:mb-16 leading-relaxed font-light animate-fade-in px-4" style={{ animationDelay: '700ms' }}>
+          <p className="text-white/80 text-lg sm:text-xl md:text-2xl lg:text-3xl tracking-wide max-w-4xl mx-auto mb-12 sm:mb-16 leading-relaxed font-light animate-fade-in px-6 sm:px-4" style={{ animationDelay: '700ms' }}>
             Explore our handpicked selection of properties in your criteria
           </p>
         </div>
       </section>
 
       {/* Featured Collection */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-        <div className="text-center mb-20">
-          <Badge className="badge-accent text-sm px-6 py-2 mb-6">Featured Properties</Badge>
-          <h2 className="luxury-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-widest mb-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-24">
+        <div className="text-center mb-12 sm:mb-16 md:mb-20">
+          <Badge className="badge-accent text-xs sm:text-sm px-4 sm:px-6 py-1.5 sm:py-2 mb-4 sm:mb-6">Featured Properties</Badge>
+          <h2 className="luxury-heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-widest mb-4 sm:mb-6 px-4">
             EXCEPTIONAL PROPERTIES
           </h2>
-          <div className="h-1 w-32 mx-auto divider-accent mb-8"></div>
-          <p className="text-white/70 text-xl tracking-wide max-w-3xl mx-auto">
+          <div className="h-0.5 sm:h-1 w-24 sm:w-32 mx-auto divider-accent mb-6 sm:mb-8"></div>
+          <p className="text-white/70 text-base sm:text-lg md:text-xl tracking-wide max-w-3xl mx-auto px-4">
             Explore our handpicked selection of premium properties, each offering unparalleled luxury and sophistication
           </p>
         </div>
 
         {propertyList.length === 0 ? (
-          <Card className="glass-card-accent elevated-card p-20 text-center">
+          <Card className="glass-card-accent elevated-card p-8 sm:p-12 md:p-20 text-center">
             <div className="max-w-md mx-auto">
-              <div className="w-32 h-32 mx-auto mb-10 rounded-full bg-white/10 flex items-center justify-center">
-                <Home className="h-16 w-16 text-white/60" />
+              <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-10 rounded-full bg-white/10 flex items-center justify-center">
+                <Home className="h-12 w-12 sm:h-16 sm:w-16 text-white/60" />
               </div>
-              <h3 className="luxury-heading text-4xl font-semibold text-white mb-6 tracking-[0.15em]">
+              <h3 className="luxury-heading text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-4 sm:mb-6 tracking-[0.15em]">
                 Coming Soon
               </h3>
-              <p className="text-white/70 text-xl tracking-wide">
+              <p className="text-white/70 text-base sm:text-lg md:text-xl tracking-wide">
                 Our exclusive collection is being curated. Check back soon for extraordinary properties.
               </p>
             </div>
           </Card>
         ) : (
-          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:gap-8 md:gap-10 md:grid-cols-2 lg:grid-cols-3">
             {propertyList.slice(0, 6).map((property, index) => (
               <div key={property.id} className="animate-fade-in-scale" style={{ animationDelay: `${index * 100}ms` }}>
                 <PublicPropertyCard property={property} />
@@ -150,11 +150,11 @@ export default async function HomePage() {
         )}
 
         {propertyList.length > 6 && (
-          <div className="text-center mt-16">
+          <div className="text-center mt-12 sm:mt-16">
             <Link href="/properties">
-              <Button className="btn-luxury h-16 px-12 text-xl">
+              <Button className="btn-luxury h-12 sm:h-14 md:h-16 px-8 sm:px-10 md:px-12 text-base sm:text-lg md:text-xl">
                 View All Properties
-                <ChevronRight className="h-5 w-5 ml-2" />
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
               </Button>
             </Link>
           </div>
@@ -162,49 +162,49 @@ export default async function HomePage() {
       </section>
 
       {/* Enhanced Footer */}
-      <footer className="relative mt-32 overflow-hidden">
+      <footer className="relative mt-20 sm:mt-24 md:mt-32 overflow-hidden">
         {/* Background with gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-black to-black"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.05),transparent_50%)]"></div>
 
         <div className="relative border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
             {/* Main Footer Content */}
-            <div className="grid lg:grid-cols-12 gap-12 mb-16">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12 mb-12 sm:mb-14 md:mb-16">
               {/* Brand Section - Takes more space */}
-              <div className="lg:col-span-5">
-                <div className="flex items-center gap-4 mb-6">
+              <div className="sm:col-span-2 lg:col-span-5">
+                <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div className="shimmer animate-pulse-glow">
                     <Logo />
                   </div>
                   <div>
-                    <h3 className="luxury-heading text-2xl tracking-[0.2em] text-white font-bold">
+                    <h3 className="luxury-heading text-lg sm:text-xl md:text-2xl tracking-[0.2em] text-white font-bold">
                       LUXURY LIVING
                     </h3>
-                    <p className="text-white/60 text-xs tracking-[0.15em] uppercase mt-1">
+                    <p className="text-white/60 text-[10px] sm:text-xs tracking-[0.15em] uppercase mt-1">
                       Cadiz & Lluis
                     </p>
                   </div>
                 </div>
-                <p className="text-white/70 text-base leading-relaxed mb-8 max-w-md">
+                <p className="text-white/70 text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 max-w-md">
                   Your trusted partner in premium property management, delivering exceptional service and exclusive access to the finest properties.
                 </p>
 
                 {/* Contact Info Cards */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center gap-3 text-white/80 hover:text-white transition-colors group">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                      <Phone className="h-5 w-5" />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors flex-shrink-0">
+                      <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <a href="tel:+18186424050" className="text-sm">
+                    <a href="tel:+18186424050" className="text-xs sm:text-sm break-all">
                       +1 (818) 642-4050
                     </a>
                   </div>
                   <div className="flex items-center gap-3 text-white/80 hover:text-white transition-colors group">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                      <Mail className="h-5 w-5" />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors flex-shrink-0">
+                      <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <a href="mailto:diego@comcreate.org" className="text-sm">
+                    <a href="mailto:diego@comcreate.org" className="text-xs sm:text-sm break-all">
                       diego@comcreate.org
                     </a>
                   </div>
@@ -213,7 +213,7 @@ export default async function HomePage() {
 
               {/* Quick Links */}
               <div className="lg:col-span-2">
-                <h4 className="text-white font-bold mb-6 uppercase tracking-wider text-sm">Properties</h4>
+                <h4 className="text-white font-bold mb-4 sm:mb-6 uppercase tracking-wider text-xs sm:text-sm">Properties</h4>
                 <ul className="space-y-3">
                   {['Featured', 'New Listings', 'Luxury Homes', 'Contact Manager'].map((item, i) => (
                     <li key={i}>
@@ -228,7 +228,7 @@ export default async function HomePage() {
 
               {/* Company Links */}
               <div className="lg:col-span-2">
-                <h4 className="text-white font-bold mb-6 uppercase tracking-wider text-sm">Company</h4>
+                <h4 className="text-white font-bold mb-4 sm:mb-6 uppercase tracking-wider text-xs sm:text-sm">Company</h4>
                 <ul className="space-y-3">
                   {['About Us', 'Our Services', 'Testimonials', 'How It Works'].map((item, i) => (
                     <li key={i}>
@@ -242,24 +242,24 @@ export default async function HomePage() {
               </div>
 
               {/* CTA Section */}
-              <div className="lg:col-span-3">
-                <h4 className="text-white font-bold mb-6 uppercase tracking-wider text-sm">Get In Touch</h4>
-                <p className="text-white/70 text-sm leading-relaxed mb-6">
+              <div className="sm:col-span-2 lg:col-span-3">
+                <h4 className="text-white font-bold mb-4 sm:mb-6 uppercase tracking-wider text-xs sm:text-sm">Get In Touch</h4>
+                <p className="text-white/70 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6">
                   Ready to find your perfect luxury property? Contact us today.
                 </p>
-                <Button className="btn-luxury h-12 px-8 text-sm w-full">
-                  <Mail className="h-4 w-4 mr-2" />
+                <Button className="btn-luxury h-11 sm:h-12 px-6 sm:px-8 text-xs sm:text-sm w-full">
+                  <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Contact Us
                 </Button>
               </div>
             </div>
 
             {/* Divider */}
-            <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent mb-10"></div>
+            <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent mb-8 sm:mb-10"></div>
 
             {/* Bottom Bar */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-8 text-white/50 text-sm">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 sm:gap-4 md:gap-8 text-white/50 text-xs sm:text-sm text-center">
                 <span>© {new Date().getFullYear()} Luxury Living</span>
                 <span className="hidden md:inline">•</span>
                 <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
@@ -268,7 +268,7 @@ export default async function HomePage() {
               </div>
 
               <div className="flex items-center gap-4">
-                <span className="text-white/40 text-xs uppercase tracking-wider">Powered by Excellence</span>
+                <span className="text-white/40 text-[10px] sm:text-xs uppercase tracking-wider">Powered by Excellence</span>
               </div>
             </div>
           </div>

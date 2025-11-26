@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/logo'
-import { Menu, X, Home, Building2, Phone, Mail } from 'lucide-react'
+import { Menu, X, Home, Building2, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -22,10 +22,7 @@ export function PublicHeader() {
       <header className="border-b border-white/20 backdrop-blur-md sticky top-0 z-50 glass-card-accent">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center justify-between">
-            {/* Spacer for mobile to center logo */}
-            <div className="w-9 md:hidden" />
-
-            {/* Logo and Brand - Centered */}
+            {/* Logo and Brand - Left Aligned */}
             <Link href="/" className="flex items-center gap-3 sm:gap-4 md:gap-5 hover:opacity-90 transition-opacity">
               <div className="shimmer">
                 <Logo />
@@ -140,13 +137,6 @@ export function PublicHeader() {
                 >
                   <Phone className="h-4 w-4" />
                   <span className="text-sm">+1 (818) 642-4050</span>
-                </a>
-                <a
-                  href="mailto:diego@comcreate.org"
-                  className="flex items-center gap-3 px-4 py-2 text-white/70 hover:text-white transition-colors"
-                >
-                  <Mail className="h-4 w-4" />
-                  <span className="text-sm">diego@comcreate.org</span>
                 </a>
               </div>
             </div>

@@ -26,30 +26,8 @@ export default async function PropertiesPage() {
 
       {/* Page Hero - Matching Home Page Style */}
       <section className="relative min-h-[40vh] sm:min-h-[50vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden py-12 sm:py-16 md:py-0">
-        {/* Multiple Layer Backgrounds for Depth */}
-        <div className="absolute inset-0">
-          {/* Layer 1: Base gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-black via-background to-secondary"></div>
-
-          {/* Layer 2: Large hero image with parallax */}
-          <div className="absolute inset-0 opacity-30" style={{ transform: 'translateZ(0)' }}>
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80')] bg-cover bg-center animate-gradient-shift bg-[length:120%]"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-          </div>
-
-          {/* Layer 3: Animated light rays */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 left-1/4 w-1 h-full bg-gradient-to-b from-white/20 to-transparent animate-pulse" style={{ animationDelay: '0s' }}></div>
-            <div className="absolute top-0 left-1/2 w-1 h-full bg-gradient-to-b from-white/20 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
-            <div className="absolute top-0 left-3/4 w-1 h-full bg-gradient-to-b from-white/20 to-transparent animate-pulse" style={{ animationDelay: '2s' }}></div>
-          </div>
-
-          {/* Layer 4: Radial gradients */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          </div>
-        </div>
+        {/* Black Background */}
+        <div className="absolute inset-0 bg-black"></div>
 
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 sm:px-6 max-w-7xl mx-auto w-full">

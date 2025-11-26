@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { PublicPropertyCard } from '@/components/public-property-card'
 import { ContactForm } from '@/components/contact-form'
 import { Logo } from '@/components/logo'
+import { PublicHeader } from '@/components/public-header'
 import { Home, Shield, Clock, Award, CheckCircle2, Users, Mail, Phone, MapPin as MapPinIcon, Sparkles, TrendingUp, Heart, Key, ChevronRight, Star } from 'lucide-react'
 import Link from 'next/link'
 
@@ -21,27 +22,8 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen marble-bg">
-      {/* Enhanced Header */}
-      <header className="border-b border-white/20 backdrop-blur-md sticky top-0 z-50 glass-card-accent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-3">
-          <div className="flex items-center justify-center">
-            {/* Logo and Brand */}
-            <div className="flex items-center gap-4 sm:gap-5">
-              <div className="shimmer">
-                <Logo />
-              </div>
-              <div className="flex flex-col">
-                <div className="luxury-heading text-xl sm:text-2xl md:text-3xl tracking-widest text-white">
-                  LUXURY LIVING
-                </div>
-                <div className="text-xs sm:text-sm tracking-[0.25em] text-white/80 uppercase font-semibold">
-                  Cadiz & Lluis
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header with Navigation */}
+      <PublicHeader />
 
       {/* Epic Hero Section with Parallax */}
       <section className="relative min-h-[50vh] sm:min-h-[70vh] md:min-h-screen flex items-center justify-center overflow-hidden py-12 sm:py-16 md:py-0">

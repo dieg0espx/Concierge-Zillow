@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PublicPropertyCard } from '@/components/public-property-card'
+import { PublicHeader } from '@/components/public-header'
 import { Logo } from '@/components/logo'
 import { Home, Search, MapPin, ArrowLeft, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
@@ -20,75 +21,74 @@ export default async function PropertiesPage() {
 
   return (
     <div className="min-h-screen marble-bg">
-      {/* Header */}
-      <header className="border-b border-white/20 backdrop-blur-md sticky top-0 z-50 glass-card-accent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
-          <div className="flex items-center justify-between">
-            {/* Logo and Brand */}
-            <Link href="/" className="flex items-center gap-4 sm:gap-5 hover:opacity-80 transition-opacity">
-              <div className="shimmer animate-pulse-glow">
-                <Logo />
-              </div>
-              <div className="flex flex-col">
-                <div className="luxury-heading text-xl sm:text-2xl md:text-3xl tracking-widest text-white">
-                  LUXURY CONCIERGE
-                </div>
-                <div className="text-xs sm:text-sm tracking-[0.25em] text-white/80 uppercase font-semibold">
-                  Cadiz & Lluis
-                </div>
-              </div>
-            </Link>
+      {/* Header with Navigation */}
+      <PublicHeader />
 
-            {/* Back to Home */}
-            <Link href="/">
-              <Button variant="outline" className="border-white/30 hover:bg-white/10 hover:border-white text-white">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Page Hero */}
-      <section className="relative py-20 sm:py-32 overflow-hidden">
-        {/* Background */}
+      {/* Page Hero - Matching Home Page Style */}
+      <section className="relative min-h-[40vh] sm:min-h-[50vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden py-12 sm:py-16 md:py-0">
+        {/* Multiple Layer Backgrounds for Depth */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-background to-background"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.03),transparent_70%)]"></div>
+          {/* Layer 1: Base gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-background to-secondary"></div>
+
+          {/* Layer 2: Large hero image with parallax */}
+          <div className="absolute inset-0 opacity-30" style={{ transform: 'translateZ(0)' }}>
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80')] bg-cover bg-center animate-gradient-shift bg-[length:120%]"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+          </div>
+
+          {/* Layer 3: Animated light rays */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-0 left-1/4 w-1 h-full bg-gradient-to-b from-white/20 to-transparent animate-pulse" style={{ animationDelay: '0s' }}></div>
+            <div className="absolute top-0 left-1/2 w-1 h-full bg-gradient-to-b from-white/20 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
+            <div className="absolute top-0 left-3/4 w-1 h-full bg-gradient-to-b from-white/20 to-transparent animate-pulse" style={{ animationDelay: '2s' }}></div>
+          </div>
+
+          {/* Layer 4: Radial gradients */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          </div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <Badge className="badge-accent text-sm px-6 py-2 mb-6 animate-fade-in">
-              <Home className="h-4 w-4 mr-2" />
-              Property Collection
-            </Badge>
-            <h1 className="luxury-heading text-5xl sm:text-6xl md:text-7xl font-bold text-white tracking-widest mb-6 animate-reveal">
-              ALL PROPERTIES
-            </h1>
-            <div className="h-1 w-32 mx-auto divider-accent mb-8"></div>
-            <p className="text-white/70 text-xl sm:text-2xl tracking-wide max-w-3xl mx-auto leading-relaxed animate-fade-in">
-              Browse our exclusive collection of luxury properties
-            </p>
+        {/* Hero Content */}
+        <div className="relative z-10 text-center px-4 sm:px-6 max-w-7xl mx-auto w-full">
+          <Badge className="badge-accent text-xs sm:text-sm px-4 sm:px-6 py-1.5 sm:py-2 mb-4 sm:mb-6 animate-fade-in">
+            <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+            Property Collection
+          </Badge>
+          <h1 className="luxury-heading text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 animate-reveal leading-tight" style={{
+            animationDelay: '400ms',
+            textShadow: '0 0 80px rgba(255,255,255,0.1)'
+          }}>
+            ALL PROPERTIES
+          </h1>
+
+          {/* Decorative line */}
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
+            <div className="h-px w-10 sm:w-12 md:w-16 bg-gradient-to-r from-transparent to-white/50"></div>
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white/80"></div>
+            <div className="h-px w-10 sm:w-12 md:w-16 bg-gradient-to-l from-transparent to-white/50"></div>
           </div>
+
+          <p className="text-white/80 text-sm sm:text-base md:text-xl lg:text-2xl tracking-wide max-w-3xl mx-auto mb-8 sm:mb-10 leading-relaxed font-light animate-fade-in px-4" style={{ animationDelay: '700ms' }}>
+            Browse our exclusive collection of luxury properties
+          </p>
 
           {/* Property Count & Search */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
-            <div className="flex items-center gap-4">
-              <Badge variant="outline" className="text-lg px-8 py-4 bg-white/10 border-white/30 backdrop-blur-sm">
-                <Home className="h-5 w-5 mr-2" />
-                {propertyList.length} {propertyList.length === 1 ? 'Property' : 'Properties'}
-              </Badge>
-            </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 animate-fade-in" style={{ animationDelay: '800ms' }}>
+            <Badge variant="outline" className="text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 bg-white/10 border-white/30 backdrop-blur-sm">
+              <Home className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              {propertyList.length} {propertyList.length === 1 ? 'Property' : 'Properties'}
+            </Badge>
 
             {/* Search Bar */}
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
+            <div className="relative w-full sm:w-80 md:w-96">
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-white/50" />
               <Input
                 type="text"
                 placeholder="Search by location, price..."
-                className="pl-12 h-14 bg-white/5 border-white/30 focus:border-white text-white placeholder:text-white/50"
+                className="pl-10 sm:pl-12 h-10 sm:h-12 bg-white/5 border-white/30 focus:border-white text-white placeholder:text-white/50 text-sm sm:text-base"
               />
             </div>
           </div>
@@ -96,7 +96,7 @@ export default async function PropertiesPage() {
       </section>
 
       {/* Properties Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-24">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-24">
         {propertyList.length === 0 ? (
           <div className="glass-card-accent elevated-card p-20 text-center rounded-3xl">
             <div className="w-32 h-32 mx-auto mb-10 rounded-full bg-white/10 flex items-center justify-center">

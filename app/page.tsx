@@ -44,7 +44,7 @@ export default async function HomePage() {
       </header>
 
       {/* Epic Hero Section with Parallax */}
-      <section className="relative min-h-[80vh] sm:min-h-screen flex items-center justify-center overflow-hidden py-16 sm:py-20 md:py-0">
+      <section className="relative min-h-[50vh] sm:min-h-[70vh] md:min-h-screen flex items-center justify-center overflow-hidden py-12 sm:py-16 md:py-0">
         {/* Multiple Layer Backgrounds for Depth */}
         <div className="absolute inset-0">
           {/* Layer 1: Base gradient */}
@@ -90,7 +90,7 @@ export default async function HomePage() {
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 sm:px-6 max-w-7xl mx-auto">
           {/* Main Heading */}
-          <h1 className="luxury-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 sm:mb-8 animate-reveal leading-tight px-4" style={{
+          <h1 className="luxury-heading text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-6 md:mb-8 animate-reveal leading-tight px-4" style={{
             animationDelay: '400ms',
             textShadow: '0 0 80px rgba(255,255,255,0.1)'
           }}>
@@ -99,14 +99,14 @@ export default async function HomePage() {
           </h1>
 
           {/* Decorative line */}
-          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10 animate-fade-in" style={{ animationDelay: '600ms' }}>
-            <div className="h-px w-12 sm:w-16 bg-gradient-to-r from-transparent to-white/50"></div>
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8 md:mb-10 animate-fade-in" style={{ animationDelay: '600ms' }}>
+            <div className="h-px w-10 sm:w-12 md:w-16 bg-gradient-to-r from-transparent to-white/50"></div>
             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white/80"></div>
-            <div className="h-px w-12 sm:w-16 bg-gradient-to-l from-transparent to-white/50"></div>
+            <div className="h-px w-10 sm:w-12 md:w-16 bg-gradient-to-l from-transparent to-white/50"></div>
           </div>
 
           {/* Subtitle */}
-          <p className="text-white/80 text-lg sm:text-xl md:text-2xl lg:text-3xl tracking-wide max-w-4xl mx-auto mb-12 sm:mb-16 leading-relaxed font-light animate-fade-in px-6 sm:px-4" style={{ animationDelay: '700ms' }}>
+          <p className="text-white/80 text-base sm:text-lg md:text-2xl lg:text-3xl tracking-wide max-w-4xl mx-auto mb-8 sm:mb-12 md:mb-16 leading-relaxed font-light animate-fade-in px-6 sm:px-4" style={{ animationDelay: '700ms' }}>
             Explore our handpicked selection of properties in your criteria
           </p>
         </div>

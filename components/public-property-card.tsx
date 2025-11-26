@@ -39,25 +39,37 @@ export function PublicPropertyCard({ property }: { property: Property }) {
                 e.currentTarget.style.display = 'none'
               }}
             />
-            {/* Navigation Arrows */}
+            {/* Navigation Arrows - Always visible on mobile, hover on desktop */}
             {images.length > 1 && (
               <>
                 {/* Left Arrow */}
                 <button
-                  onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all opacity-0 group-hover/gallery:opacity-100"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 sm:p-2 transition-all opacity-100 sm:opacity-0 sm:group-hover/gallery:opacity-100"
                   aria-label="Previous image"
                 >
-                  <ChevronLeft className="h-6 w-6" />
+                  <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
                 {/* Right Arrow */}
                 <button
-                  onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all opacity-0 group-hover/gallery:opacity-100"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 sm:p-2 transition-all opacity-100 sm:opacity-0 sm:group-hover/gallery:opacity-100"
                   aria-label="Next image"
                 >
-                  <ChevronRight className="h-6 w-6" />
+                  <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
+                {/* Image counter indicator */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
               </>
             )}
           </>

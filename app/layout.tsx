@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   title: 'Luxury Concierge - Cadiz & Lluis',
   description: 'Luxury concierge services tailored to your every need. Unparalleled experiences and personalized care.',
   generator: 'Cadiz & Lluis',
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+  },
   icons: {
     icon: [
       // Default favicon using provided black logo
@@ -24,10 +28,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#000000' },
-    { media: '(prefers-color-scheme: light)', color: '#000000' },
-  ],
+  themeColor: '#000000',
 }
 
 export default function RootLayout({

@@ -113,3 +113,27 @@ export async function deleteProperty(propertyId: string) {
   revalidatePath('/admin/properties')
   return { success: true }
 }
+
+export async function updatePropertyOrder(propertyIds: string[]) {
+  const supabase = await createClient()
+
+  // Update each property's position based on array index
+  const updates = propertyIds.map((id, index) =>
+    supabase
+      .from('properties')
+      .update({ position: index })
+      .eq('id', id)
+  )
+
+  const results = await Promise.all(updates)
+  const errors = results.filter(r => r.error)
+
+  if (errors.length > 0) {
+    return { error: 'Failed to update some property positions' }
+  }
+
+  revalidatePath('/admin/properties')
+  revalidatePath('/properties')
+  revalidatePath('/')
+  return { success: true }
+}

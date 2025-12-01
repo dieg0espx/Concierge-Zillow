@@ -437,6 +437,29 @@
     border-color: rgba(255, 255, 255, 0.3);
   }
 
+  /* Sortable card styles for drag and drop */
+  .elevated-card.sortable-card {
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
+                opacity 0.2s ease,
+                box-shadow 0.3s ease,
+                ring 0.2s ease !important;
+    will-change: transform, opacity;
+  }
+
+  .elevated-card.sortable-card:hover {
+    transform: none !important;
+  }
+
+  /* Smooth drag animations */
+  .elevated-card.sortable-card[draggable="true"] {
+    cursor: grab;
+    user-select: none;
+  }
+
+  .elevated-card.sortable-card[draggable="true"]:active {
+    cursor: grabbing;
+  }
+
   /* Premium Badge */
   .badge-accent {
     background: var(--gradient-white);

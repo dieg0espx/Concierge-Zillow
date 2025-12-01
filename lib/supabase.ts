@@ -18,20 +18,44 @@ export interface Property {
   scraped_at: string | null
   created_at: string | null
   updated_at: string | null
+  position: number | null
 }
 
 export async function getProperties() {
+  // Fetch all properties with position ordering
+  // nullsFirst: true puts new properties (without position) at the top
+  // Then sort by created_at descending for properties with null position
   const { data, error } = await supabase
     .from('properties')
     .select('*')
-    .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching properties:', error)
     return []
   }
 
-  return data as Property[]
+  // Sort: properties with position come first (by position asc),
+  // then properties without position (by created_at desc)
+  const sorted = (data as Property[]).sort((a, b) => {
+    // Both have positions - sort by position ascending
+    if (a.position !== null && b.position !== null) {
+      return a.position - b.position
+    }
+    // Only a has position - a comes first
+    if (a.position !== null && b.position === null) {
+      return -1
+    }
+    // Only b has position - b comes first
+    if (a.position === null && b.position !== null) {
+      return 1
+    }
+    // Neither has position - sort by created_at descending (newest first)
+    const aDate = a.created_at ? new Date(a.created_at).getTime() : 0
+    const bDate = b.created_at ? new Date(b.created_at).getTime() : 0
+    return bDate - aDate
+  })
+
+  return sorted
 }
 
 export async function getPropertyById(id: string) {

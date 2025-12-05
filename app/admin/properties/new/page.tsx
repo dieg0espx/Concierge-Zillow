@@ -208,45 +208,150 @@ export default function AddPropertyPage() {
       // The API returns nested structure with 'property' object
       const propertyData = data.property || data
 
-      // Extract address from the nested structure
-      const address = propertyData.addressRaw ||
-                     propertyData.address?.street ||
-                     propertyData.address ||
-                     propertyData.streetAddress ||
-                     propertyData.fullAddress ||
-                     "Address not available"
+      // Log available fields for debugging
+      console.log('Available API fields:', Object.keys(propertyData))
 
-      if (address === "Address not available") {
+      // Extract address - check addressRaw first, then build from object
+      let address = ""
+
+      if (propertyData.addressRaw) {
+        address = propertyData.addressRaw
+      } else if (typeof propertyData.address === 'object' && propertyData.address) {
+        const addr = propertyData.address
+        const parts = [addr.street, addr.city, `${addr.state} ${addr.zipcode}`].filter(Boolean)
+        address = parts.join(', ')
+      } else if (typeof propertyData.address === 'string') {
+        address = propertyData.address
+      } else if (propertyData.fullAddress) {
+        address = propertyData.fullAddress
+      } else if (propertyData.streetAddress) {
+        address = propertyData.streetAddress
+      }
+
+      if (!address) {
+        address = "Address not available"
         console.warn('No address found in response. Available fields:', Object.keys(propertyData))
       }
 
-      // Extract rent/price - could be in different fields
-      const rent = propertyData.price ||
-                  propertyData.rent ||
-                  propertyData.monthlyRent ||
-                  propertyData.rentPrice ||
-                  propertyData.rentZestimate ||
-                  ""
+      console.log('Extracted address:', address)
 
-      // Extract property details - some listings might not have these
-      const bedrooms = propertyData.bedrooms ||
-                      propertyData.beds ||
-                      (propertyData.resoFacts && propertyData.resoFacts.bedrooms) ||
-                      ""
+      // Check if this is a multi-unit building with listings or floorPlans array
+      const hasListings = Array.isArray(propertyData.listings) && propertyData.listings.length > 0
+      const hasFloorPlans = Array.isArray(propertyData.floorPlans) && propertyData.floorPlans.length > 0
+      const isMultiUnit = hasListings || hasFloorPlans
 
-      const bathrooms = propertyData.bathrooms ||
-                       propertyData.baths ||
-                       (propertyData.resoFacts && propertyData.resoFacts.bathrooms) ||
-                       ""
+      // Use listings if available, otherwise floorPlans
+      const unitData = hasListings ? propertyData.listings : (hasFloorPlans ? propertyData.floorPlans : [])
+      console.log('Is multi-unit building:', isMultiUnit, 'Units count:', unitData.length)
 
-      const area = propertyData.livingArea ||
-                  propertyData.area ||
-                  propertyData.lotSize ||
-                  (propertyData.resoFacts && propertyData.resoFacts.livingArea) ||
-                  ""
+      let rent = ""
+      let bedrooms = ""
+      let bathrooms = ""
+      let area = ""
 
-      // Get image URLs from Zillow
-      const zillowImageUrls = propertyData.photos || propertyData.images || []
+      if (isMultiUnit && unitData.length > 0) {
+        // For multi-unit buildings, extract from listings or floorPlans array
+        console.log('First unit data sample:', JSON.stringify(unitData[0]))
+
+        // Get rent range (min-max) - check multiple possible field names
+        const rents = unitData
+          .map((l: any) => l.price || l.rent || l.monthlyRent || l.rentPrice || l.minPrice)
+          .filter((r: any) => r !== null && r !== undefined && r !== 0)
+          .map((r: any) => typeof r === 'string' ? parseInt(r.replace(/[^0-9]/g, '')) : r)
+          .filter((r: number) => !isNaN(r) && r > 0)
+
+        if (rents.length > 0) {
+          const minRent = Math.min(...rents)
+          const maxRent = Math.max(...rents)
+          rent = minRent === maxRent ? `$${minRent.toLocaleString()}` : `$${minRent.toLocaleString()} - $${maxRent.toLocaleString()}`
+        }
+
+        // Get bedroom range
+        const beds = unitData
+          .map((l: any) => l.bedrooms || l.beds || l.bedroom)
+          .filter((b: any) => b !== null && b !== undefined)
+          .map((b: any) => parseInt(b))
+          .filter((b: number) => !isNaN(b))
+
+        if (beds.length > 0) {
+          const minBeds = Math.min(...beds)
+          const maxBeds = Math.max(...beds)
+          bedrooms = minBeds === maxBeds ? minBeds.toString() : `${minBeds}-${maxBeds}`
+        }
+
+        // Get bathroom range
+        const baths = unitData
+          .map((l: any) => l.bathrooms || l.baths || l.bathroom)
+          .filter((b: any) => b !== null && b !== undefined)
+          .map((b: any) => parseFloat(b))
+          .filter((b: number) => !isNaN(b))
+
+        if (baths.length > 0) {
+          const minBaths = Math.min(...baths)
+          const maxBaths = Math.max(...baths)
+          bathrooms = minBaths === maxBaths ? minBaths.toString() : `${minBaths}-${maxBaths}`
+        }
+
+        // Get area range
+        const areas = unitData
+          .map((l: any) => l.livingArea || l.area || l.sqft || l.squareFeet)
+          .filter((a: any) => a !== null && a !== undefined && a !== 0)
+          .map((a: any) => parseInt(a))
+          .filter((a: number) => !isNaN(a) && a > 0)
+
+        if (areas.length > 0) {
+          const minArea = Math.min(...areas)
+          const maxArea = Math.max(...areas)
+          area = minArea === maxArea ? minArea.toString() : `${minArea}-${maxArea}`
+        }
+
+        console.log('Extracted from units - Rent:', rent, 'Beds:', bedrooms, 'Baths:', bathrooms, 'Area:', area)
+      } else {
+        // Single property - extract from root level
+        rent = propertyData.price ||
+               propertyData.rent ||
+               propertyData.monthlyRent ||
+               propertyData.rentPrice ||
+               propertyData.rentZestimate ||
+               ""
+
+        bedrooms = propertyData.bedrooms ||
+                   propertyData.beds ||
+                   (propertyData.resoFacts && propertyData.resoFacts.bedrooms) ||
+                   ""
+
+        bathrooms = propertyData.bathrooms ||
+                    propertyData.baths ||
+                    (propertyData.resoFacts && propertyData.resoFacts.bathrooms) ||
+                    ""
+
+        area = propertyData.livingArea ||
+               propertyData.area ||
+               propertyData.lotSize ||
+               (propertyData.resoFacts && propertyData.resoFacts.livingArea) ||
+               ""
+      }
+
+      // Get image URLs from Zillow - handle both string arrays and object arrays
+      let zillowImageUrls: string[] = []
+      const rawPhotos = propertyData.photos || propertyData.images || []
+
+      if (rawPhotos.length > 0) {
+        if (typeof rawPhotos[0] === 'string') {
+          // Already string URLs
+          zillowImageUrls = rawPhotos
+        } else if (typeof rawPhotos[0] === 'object') {
+          // Objects with url property
+          zillowImageUrls = rawPhotos.map((p: any) => p.url || p.href || p.src).filter(Boolean)
+        }
+      }
+
+      // Also check for main image
+      if (propertyData.image && !zillowImageUrls.includes(propertyData.image)) {
+        zillowImageUrls.unshift(propertyData.image)
+      }
+
+      console.log('Found', zillowImageUrls.length, 'images')
 
       let cloudinaryImageUrls: string[] = []
 
@@ -272,11 +377,20 @@ export default function AddPropertyPage() {
           const uploadData = await uploadResponse.json()
           cloudinaryImageUrls = uploadData.urls || []
           console.log(`Successfully uploaded ${cloudinaryImageUrls.length} images to Cloudinary`)
+
+          // If Cloudinary returned 0 images, fall back to Zillow URLs
+          if (cloudinaryImageUrls.length === 0 && zillowImageUrls.length > 0) {
+            console.log('Cloudinary returned 0 images, using original Zillow URLs')
+            cloudinaryImageUrls = zillowImageUrls
+          }
         } catch (uploadError) {
           console.error('Error uploading images to Cloudinary:', uploadError)
           // Continue with Zillow URLs if Cloudinary upload fails
           cloudinaryImageUrls = zillowImageUrls
         }
+      } else {
+        // No images from API
+        cloudinaryImageUrls = []
       }
 
       const newProperty = {

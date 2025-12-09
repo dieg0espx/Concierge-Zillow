@@ -6,7 +6,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function POST(request: NextRequest) {
   try {
-    const { propertyId, address, monthly_rent, bedrooms, bathrooms, area } = await request.json()
+    const { propertyId, address, bedrooms, bathrooms, area } = await request.json()
 
     if (!propertyId) {
       return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
@@ -18,11 +18,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate description with OpenAI
-    const prompt = `Write a professional, engaging property listing description for a luxury rental property. Use markdown formatting with **bold text** for emphasis and proper line breaks.
+    const prompt = `Write a professional, engaging property listing description for a luxury property. Use markdown formatting with **bold text** for emphasis and proper line breaks.
 
 Property Details:
 - Address: ${address || 'Luxury Property'}
-- Monthly Rent: $${monthly_rent || 'Contact for pricing'}
 - Bedrooms: ${bedrooms || 'Contact for details'}
 - Bathrooms: ${bathrooms || 'Contact for details'}
 - Square Feet: ${area || 'Contact for details'}

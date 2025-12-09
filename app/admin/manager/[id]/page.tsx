@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation'
 import { PropertyAssignment } from '@/components/property-assignment'
 import { ManagerUrlDisplay } from '@/components/manager-url-display'
 import { ProfilePictureUpload } from '@/components/profile-picture-upload'
+import { ClientManagement } from '@/components/client-management'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Phone, ExternalLink, Users, Camera } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, ExternalLink } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/utils'
 
 export default async function ManagerPropertiesPage({
@@ -40,6 +41,13 @@ export default async function ManagerPropertiesPage({
     .eq('manager_id', params.id)
 
   const assignedProperties = (assignments?.map((a: any) => a.properties).filter(Boolean) || []) as any[]
+
+  // Fetch clients for this manager
+  const { data: clients, error: clientsError } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('manager_id', params.id)
+    .order('created_at', { ascending: false })
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -90,6 +98,9 @@ export default async function ManagerPropertiesPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Clients Section */}
+      <ClientManagement managerId={params.id} clients={clients || []} />
 
       {/* Public Portfolio URL Section */}
       <Card className="elevated-card">

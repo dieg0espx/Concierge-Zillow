@@ -11,15 +11,21 @@ import { useState } from 'react'
 type Property = {
   id: string
   address: string | null
-  monthly_rent: string | null
   bedrooms: string | null
   bathrooms: string | null
   area: string | null
   zillow_url: string
   images: any
+  // Flexible pricing options from property
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
 }
 
-export function PublicPropertyCard({ property }: { property: Property }) {
+export function PublicPropertyCard({ property, clientId }: { property: Property; clientId?: string }) {
   const images = Array.isArray(property.images) && property.images.length > 0
     ? property.images
     : []
@@ -78,26 +84,51 @@ export function PublicPropertyCard({ property }: { property: Property }) {
             <Home className="h-24 w-24 text-white/20" />
           </div>
         )}
-        {/* Price Badge with Enhanced Luxury Styling */}
-        {property.monthly_rent && (
-          <div className="absolute top-4 right-4 z-10">
-            <div className="relative">
-              {/* Glow effect background */}
-              <div className="absolute inset-0 bg-white/20 blur-lg rounded-lg"></div>
-              {/* Main price container */}
-              <div className="relative backdrop-blur-md bg-gradient-to-br from-white/95 to-white/85 border border-white/30 rounded-lg shadow-xl px-3 py-2">
-                <div className="flex flex-col items-end">
-                  <span className="text-lg sm:text-xl font-bold text-black tracking-tight leading-none">
-                    {formatCurrency(property.monthly_rent)}
-                  </span>
-                  <span className="text-[10px] text-black/60 font-semibold uppercase tracking-wider mt-0.5">
-                    per month
-                  </span>
+        {/* Flexible Pricing Badge - max 2 prices */}
+        {(property.show_monthly_rent || property.show_nightly_rate || property.show_purchase_price) && (() => {
+          // Build array of prices to display (max 2)
+          const prices: { value: number; label: string; note?: string }[] = []
+          if (property.show_monthly_rent && property.custom_monthly_rent) {
+            prices.push({ value: property.custom_monthly_rent, label: 'per month' })
+          }
+          if (property.show_nightly_rate && property.custom_nightly_rate && prices.length < 2) {
+            prices.push({ value: property.custom_nightly_rate, label: 'per night', note: 'not including taxes' })
+          }
+          if (property.show_purchase_price && property.custom_purchase_price && prices.length < 2) {
+            prices.push({ value: property.custom_purchase_price, label: 'purchase price' })
+          }
+
+          if (prices.length === 0) return null
+
+          return (
+            <div className="absolute top-4 right-4 z-10">
+              <div className="relative">
+                {/* Glow effect background */}
+                <div className="absolute inset-0 bg-black/10 blur-lg rounded-lg"></div>
+                {/* Main price container */}
+                <div className="relative backdrop-blur-sm bg-black/30 border border-white/20 rounded-lg shadow-xl px-3 py-2">
+                  <div className="flex flex-col items-end gap-1">
+                    {prices.map((price, index) => (
+                      <div key={index} className="flex flex-col items-end">
+                        <span className="text-lg sm:text-xl font-bold text-white tracking-tight leading-none">
+                          {formatCurrency(price.value)}
+                        </span>
+                        <span className="text-[10px] text-white/70 font-semibold uppercase tracking-wider mt-0.5">
+                          {price.label}
+                        </span>
+                        {price.note && (
+                          <span className="text-[9px] text-white/60 italic">
+                            {price.note}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* Property Details */}
@@ -135,7 +166,7 @@ export function PublicPropertyCard({ property }: { property: Property }) {
         {/* Actions with Luxury Button */}
         <div className="pt-4 border-t border-white/20">
           <Button asChild className="w-full btn-luxury text-base py-6 group/btn" variant="default">
-            <Link href={`/property/${property.id}`}>
+            <Link href={clientId ? `/property/${property.id}?client=${clientId}` : `/property/${property.id}`}>
               <span className="group-hover/btn:tracking-widest transition-all duration-300">View Details</span>
             </Link>
           </Button>

@@ -8,7 +8,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Property {
   id: string
   address: string | null
-  monthly_rent: string | null
   bedrooms: string | null
   bathrooms: string | null
   area: string | null
@@ -19,6 +18,13 @@ export interface Property {
   created_at: string | null
   updated_at: string | null
   position: number | null
+  // Pricing display options
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
 }
 
 export async function getProperties() {
@@ -84,12 +90,18 @@ export async function getPropertyById(id: string) {
 export async function saveProperty(propertyData: {
   zillow_url: string
   address?: string
-  monthly_rent?: string
   bedrooms?: string
   bathrooms?: string
   area?: string
   images?: string[]
   description?: string
+  // Pricing display options
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
 }) {
   console.log('saveProperty called with:', propertyData)
 

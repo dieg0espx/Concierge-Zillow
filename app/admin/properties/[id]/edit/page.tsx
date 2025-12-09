@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Home, ArrowLeft, Save, Loader2, X, Plus } from "lucide-react"
+import { Home, ArrowLeft, Save, Loader2, X, Plus, DollarSign } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { PropertyManagerSelect, PropertyManager } from "@/components/property-manager-select"
 import { assignPropertyToManagers } from "@/lib/actions/properties"
 import { createClient } from "@/lib/supabase/client"
@@ -16,7 +17,6 @@ import Link from "next/link"
 
 interface PropertyFormData {
   address: string
-  monthly_rent: string
   bedrooms: string
   bathrooms: string
   area: string
@@ -32,7 +32,6 @@ export default function EditPropertyPage() {
 
   const [formData, setFormData] = useState<PropertyFormData>({
     address: "",
-    monthly_rent: "",
     bedrooms: "",
     bathrooms: "",
     area: "",
@@ -46,6 +45,19 @@ export default function EditPropertyPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
+
+  // Pricing options state
+  const [pricingOptions, setPricingOptions] = useState({
+    show_monthly_rent: false,
+    custom_monthly_rent: "",
+    show_nightly_rate: false,
+    custom_nightly_rate: "",
+    show_purchase_price: false,
+    custom_purchase_price: ""
+  })
+
+  // Show all images toggle
+  const [showAllImages, setShowAllImages] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -67,13 +79,22 @@ export default function EditPropertyPage() {
 
       setFormData({
         address: property.address || "",
-        monthly_rent: property.monthly_rent || "",
         bedrooms: property.bedrooms || "",
         bathrooms: property.bathrooms || "",
         area: property.area || "",
         zillow_url: property.zillow_url || "",
         description: property.description || "",
         images: Array.isArray(property.images) ? property.images : []
+      })
+
+      // Load pricing options
+      setPricingOptions({
+        show_monthly_rent: property.show_monthly_rent || false,
+        custom_monthly_rent: property.custom_monthly_rent?.toString() || "",
+        show_nightly_rate: property.show_nightly_rate || false,
+        custom_nightly_rate: property.custom_nightly_rate?.toString() || "",
+        show_purchase_price: property.show_purchase_price || false,
+        custom_purchase_price: property.custom_purchase_price?.toString() || ""
       })
 
       // Load all property managers
@@ -137,13 +158,19 @@ export default function EditPropertyPage() {
         .from('properties')
         .update({
           address: formData.address,
-          monthly_rent: formData.monthly_rent,
           bedrooms: formData.bedrooms,
           bathrooms: formData.bathrooms,
           area: formData.area,
           zillow_url: formData.zillow_url,
           description: formData.description || null,
-          images: formData.images
+          images: formData.images,
+          // Pricing options
+          show_monthly_rent: pricingOptions.show_monthly_rent,
+          custom_monthly_rent: pricingOptions.custom_monthly_rent ? Number(pricingOptions.custom_monthly_rent) : null,
+          show_nightly_rate: pricingOptions.show_nightly_rate,
+          custom_nightly_rate: pricingOptions.custom_nightly_rate ? Number(pricingOptions.custom_nightly_rate) : null,
+          show_purchase_price: pricingOptions.show_purchase_price,
+          custom_purchase_price: pricingOptions.custom_purchase_price ? Number(pricingOptions.custom_purchase_price) : null,
         })
         .eq('id', propertyId)
 
@@ -246,22 +273,6 @@ export default function EditPropertyPage() {
               />
             </div>
 
-            {/* Monthly Rent */}
-            <div className="space-y-2">
-              <Label htmlFor="monthly_rent" className="text-white/90 uppercase tracking-wide text-sm font-semibold">
-                Monthly Rent *
-              </Label>
-              <Input
-                id="monthly_rent"
-                name="monthly_rent"
-                value={formData.monthly_rent}
-                onChange={handleInputChange}
-                placeholder="2500"
-                required
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
-              />
-            </div>
-
             {/* Property Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
@@ -340,6 +351,93 @@ export default function EditPropertyPage() {
           </CardContent>
         </Card>
 
+        {/* Pricing Display Options */}
+        <Card className="glass-card-accent elevated-card">
+          <CardHeader>
+            <CardTitle className="luxury-heading text-3xl tracking-[0.15em] text-white">
+              <DollarSign className="inline-block h-7 w-7 mr-3" />
+              Pricing Display Options
+            </CardTitle>
+            <CardDescription className="text-white/70 text-base tracking-wide">
+              Choose which pricing to display on property pages
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Monthly Rent */}
+            <div className="flex items-center gap-4">
+              <Checkbox
+                id="edit_show_monthly_rent"
+                checked={pricingOptions.show_monthly_rent}
+                onCheckedChange={(checked) => setPricingOptions(prev => ({ ...prev, show_monthly_rent: !!checked }))}
+                className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black flex-shrink-0"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Label htmlFor="edit_show_monthly_rent" className="text-white font-medium cursor-pointer">Monthly Rent</Label>
+                  <span className="text-white/50 text-sm">(for long-term rentals)</span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="e.g., 50000"
+                  value={pricingOptions.custom_monthly_rent}
+                  onChange={(e) => setPricingOptions(prev => ({ ...prev, custom_monthly_rent: e.target.value }))}
+                  className={`h-12 bg-white/5 border-white/20 text-white placeholder:text-white/50 ${!pricingOptions.show_monthly_rent ? 'opacity-50' : ''}`}
+                  disabled={!pricingOptions.show_monthly_rent}
+                />
+              </div>
+            </div>
+
+            {/* Nightly Rate */}
+            <div className="flex items-center gap-4">
+              <Checkbox
+                id="edit_show_nightly_rate"
+                checked={pricingOptions.show_nightly_rate}
+                onCheckedChange={(checked) => setPricingOptions(prev => ({ ...prev, show_nightly_rate: !!checked }))}
+                className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black flex-shrink-0"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Label htmlFor="edit_show_nightly_rate" className="text-white font-medium cursor-pointer">Nightly Rate</Label>
+                  <span className="text-white/50 text-sm">(for short-term rentals)</span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="e.g., 1750"
+                  value={pricingOptions.custom_nightly_rate}
+                  onChange={(e) => setPricingOptions(prev => ({ ...prev, custom_nightly_rate: e.target.value }))}
+                  className={`h-12 bg-white/5 border-white/20 text-white placeholder:text-white/50 ${!pricingOptions.show_nightly_rate ? 'opacity-50' : ''}`}
+                  disabled={!pricingOptions.show_nightly_rate}
+                />
+                <p className="text-xs text-white/50 mt-1">Will display "not including taxes"</p>
+              </div>
+            </div>
+
+            {/* Purchase Price */}
+            <div className="flex items-center gap-4">
+              <Checkbox
+                id="edit_show_purchase_price"
+                checked={pricingOptions.show_purchase_price}
+                onCheckedChange={(checked) => setPricingOptions(prev => ({ ...prev, show_purchase_price: !!checked }))}
+                className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black flex-shrink-0"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Label htmlFor="edit_show_purchase_price" className="text-white font-medium cursor-pointer">Purchase Price</Label>
+                  <span className="text-white/50 text-sm">(for property sales)</span>
+                </div>
+                <Input
+                  type="number"
+                  placeholder="e.g., 10000000"
+                  value={pricingOptions.custom_purchase_price}
+                  onChange={(e) => setPricingOptions(prev => ({ ...prev, custom_purchase_price: e.target.value }))}
+                  className={`h-12 bg-white/5 border-white/20 text-white placeholder:text-white/50 ${!pricingOptions.show_purchase_price ? 'opacity-50' : ''}`}
+                  disabled={!pricingOptions.show_purchase_price}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Images */}
         <Card className="glass-card-accent elevated-card">
           <CardHeader>
@@ -381,12 +479,12 @@ export default function EditPropertyPage() {
 
             {/* Current Images */}
             {formData.images.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-white/90 uppercase tracking-wide text-sm font-semibold">
                   Current Images ({formData.images.length})
                 </Label>
                 <div className="grid grid-cols-1 gap-3">
-                  {formData.images.map((imageUrl, index) => (
+                  {(showAllImages ? formData.images : formData.images.slice(0, 3)).map((imageUrl, index) => (
                     <div
                       key={index}
                       className="flex items-center gap-3 p-3 glass-card-accent rounded-lg"
@@ -416,6 +514,16 @@ export default function EditPropertyPage() {
                     </div>
                   ))}
                 </div>
+                {formData.images.length > 3 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowAllImages(!showAllImages)}
+                    className="w-full text-white/70 hover:text-white hover:bg-white/10 border border-white/20"
+                  >
+                    {showAllImages ? `Show Less` : `Show More (${formData.images.length - 3} more)`}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

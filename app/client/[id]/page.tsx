@@ -8,31 +8,53 @@ import { Mail, Phone, Home } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/utils'
 import { ManagerContactForm } from '@/components/manager-contact-form'
 
-export default async function ManagerPublicPage({
+export default async function ClientPublicPage({
   params,
 }: {
   params: { id: string }
 }) {
   const supabase = await createClient()
 
-  // Fetch property manager
-  const { data: manager, error: managerError } = await supabase
-    .from('property_managers')
-    .select('*')
+  // Fetch client with their manager
+  const { data: client, error: clientError } = await supabase
+    .from('clients')
+    .select('*, property_managers(*)')
     .eq('id', params.id)
     .single()
 
-  if (managerError || !manager) {
+  if (clientError || !client) {
     notFound()
   }
 
-  // Fetch properties assigned to this manager via junction table
-  const { data: assignments, error: assignmentsError } = await supabase
-    .from('property_manager_assignments')
-    .select('property_id, properties(*)')
-    .eq('manager_id', params.id)
+  const manager = client.property_managers as any
 
-  const propertyList = (assignments?.map((a: any) => a.properties).filter(Boolean) || []) as any[]
+  // Fetch properties assigned to this client (with client-specific pricing visibility)
+  const { data: assignments, error: assignmentsError } = await supabase
+    .from('client_property_assignments')
+    .select(`
+      property_id,
+      show_monthly_rent_to_client,
+      show_nightly_rate_to_client,
+      show_purchase_price_to_client,
+      properties(*)
+    `)
+    .eq('client_id', params.id)
+
+  // Merge assignment pricing options with property data
+  // Override property's show_* fields based on client-specific settings
+  const propertyList = (assignments?.map((a: any) => {
+    const prop = a.properties
+    if (!prop) return null
+
+    // Only show pricing if both the property has it enabled AND the client assignment allows it
+    return {
+      ...prop,
+      // Override show_* based on client-specific settings
+      show_monthly_rent: prop.show_monthly_rent && (a.show_monthly_rent_to_client ?? true),
+      show_nightly_rate: prop.show_nightly_rate && (a.show_nightly_rate_to_client ?? true),
+      show_purchase_price: prop.show_purchase_price && (a.show_purchase_price_to_client ?? true),
+    }
+  }).filter(Boolean) || []) as any[]
 
   return (
     <div className="min-h-screen marble-bg">
@@ -53,11 +75,15 @@ export default async function ManagerPublicPage({
               </div>
             </div>
 
-            {/* Manager Info */}
+            {/* Client Info */}
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <h1 className="luxury-heading text-3xl sm:text-4xl font-bold text-white tracking-[0.2em] mb-2">{manager.name}</h1>
-                <p className="text-white/80 tracking-[0.15em] uppercase text-sm sm:text-base font-medium">Property Manager Portfolio</p>
+                <h1 className="luxury-heading text-3xl sm:text-4xl font-bold text-white tracking-[0.2em] mb-2">
+                  {client.name}'s Properties
+                </h1>
+                <p className="text-white/80 tracking-[0.15em] uppercase text-sm sm:text-base font-medium">
+                  Curated by {manager.name}
+                </p>
               </div>
               <Badge variant="secondary" className="bg-white/15 text-white border-white/30 backdrop-blur-md text-base sm:text-xl px-5 sm:px-6 py-2 sm:py-3 shadow-lg">
                 {propertyList.length} {propertyList.length === 1 ? 'Property' : 'Properties'}
@@ -107,17 +133,17 @@ export default async function ManagerPublicPage({
             <CardContent className="p-16 text-center">
               <Home className="h-20 w-20 text-white/40 mx-auto mb-6" />
               <h3 className="luxury-heading text-2xl font-semibold text-white mb-3 tracking-[0.15em]">No Properties Yet</h3>
-              <p className="text-white/70 text-lg tracking-wide">This property manager doesn't have any properties listed at the moment.</p>
+              <p className="text-white/70 text-lg tracking-wide">Properties are being curated for you. Check back soon!</p>
             </CardContent>
           </Card>
         ) : (
           <div className="animate-fade-in">
             <h2 className="luxury-heading text-3xl font-bold mb-8 text-white tracking-[0.2em]">
-              Available Properties
+              Properties for {client.name}
             </h2>
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               {propertyList.map((property) => (
-                <PublicPropertyCard key={property.id} property={property} />
+                <PublicPropertyCard key={property.id} property={property} clientId={params.id} />
               ))}
             </div>
           </div>
@@ -135,7 +161,7 @@ export default async function ManagerPublicPage({
       {/* Footer */}
       <footer className="mt-20 border-t border-white/10 backdrop-blur-md bg-black/20 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-center text-white/80">
-          <p className="luxury-heading tracking-[0.2em] text-base mb-4">Managed by {manager.name}</p>
+          <p className="luxury-heading tracking-[0.2em] text-base mb-4">Curated by {manager.name}</p>
           <p className="text-base tracking-wide leading-relaxed">
             For inquiries, contact{' '}
             <a href={`mailto:${manager.email}`} className="text-white font-medium hover:text-white/90 transition-colors underline decoration-white/30 hover:decoration-white/60">
@@ -156,19 +182,25 @@ export default async function ManagerPublicPage({
   )
 }
 
-// Generate static params for dynamic routes (optional, for better performance)
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const supabase = await createClient()
-  const { data: manager } = await supabase
-    .from('property_managers')
-    .select('name')
+  const { data: client } = await supabase
+    .from('clients')
+    .select('name, property_managers(name)')
     .eq('id', params.id)
     .single()
 
+  if (!client) {
+    return {
+      title: 'Property Portfolio',
+      description: 'Exclusive property portfolio',
+    }
+  }
+
+  const manager = client.property_managers as any
+
   return {
-    title: manager ? `${manager.name} - Property Portfolio` : 'Property Manager',
-    description: manager
-      ? `View all properties managed by ${manager.name}`
-      : 'Property manager portfolio',
+    title: `${client.name}'s Properties - Curated by ${manager.name}`,
+    description: `Exclusive property portfolio curated for ${client.name} by ${manager.name}`,
   }
 }

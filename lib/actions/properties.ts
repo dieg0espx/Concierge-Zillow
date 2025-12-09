@@ -2,11 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getCurrentManagerProfile } from '@/lib/actions/clients'
 
 export type Property = {
   id: string
   address: string | null
-  monthly_rent: string | null
   bedrooms: string | null
   bathrooms: string | null
   area: string | null
@@ -16,6 +16,53 @@ export type Property = {
   created_at: string | null
   updated_at: string | null
   property_manager_id: string | null
+  // Pricing display options
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
+}
+
+export async function getManagerProperties() {
+  const supabase = await createClient()
+
+  // Get current manager profile
+  const { data: managerProfile, error: managerError } = await getCurrentManagerProfile()
+
+  if (managerError || !managerProfile) {
+    return { error: managerError || 'Manager profile not found', data: [] }
+  }
+
+  // Get properties assigned to this manager
+  const { data: assignments, error: assignmentsError } = await supabase
+    .from('property_manager_assignments')
+    .select('property_id')
+    .eq('manager_id', managerProfile.id)
+
+  if (assignmentsError) {
+    return { error: assignmentsError.message, data: [] }
+  }
+
+  const propertyIds = assignments?.map(a => a.property_id) || []
+
+  if (propertyIds.length === 0) {
+    return { data: [] }
+  }
+
+  // Get the actual properties
+  const { data: properties, error: propertiesError } = await supabase
+    .from('properties')
+    .select('*')
+    .in('id', propertyIds)
+    .order('position', { ascending: true, nullsFirst: false })
+
+  if (propertiesError) {
+    return { error: propertiesError.message, data: [] }
+  }
+
+  return { data: properties as Property[] }
 }
 
 export async function assignPropertyToManager(propertyId: string, managerId: string) {

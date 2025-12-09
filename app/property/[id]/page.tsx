@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +21,7 @@ import { Logo } from "@/components/logo"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
 import { getPropertyById, Property as SupabaseProperty } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { formatCurrency, formatNumber, formatPropertyValue, isValidPropertyValue } from "@/lib/utils"
 import { PropertyContactForm } from "@/components/property-contact-form"
 
@@ -35,7 +36,6 @@ interface PropertyManager {
 interface Property {
   id: string
   address: string
-  monthly_rent: string
   bedrooms: string
   bathrooms: string
   area: string
@@ -45,11 +45,20 @@ interface Property {
   scraped_at: string | null
   created_at: string | null
   managers?: PropertyManager[]
+  // Pricing display options
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
 }
 
 export default function PropertyListingPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const propertyId = params?.id as string
+  const clientId = searchParams?.get('client') || null
   const [property, setProperty] = useState<Property | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -63,10 +72,31 @@ export default function PropertyListingPage() {
       const data = await getPropertyById(propertyId)
 
       if (data) {
+        let showMonthlyRent = (data as any).show_monthly_rent || false
+        let showNightlyRate = (data as any).show_nightly_rate || false
+        let showPurchasePrice = (data as any).show_purchase_price || false
+
+        // If client ID is provided, fetch client-specific pricing visibility
+        if (clientId) {
+          const supabase = createClient()
+          const { data: assignment } = await supabase
+            .from('client_property_assignments')
+            .select('show_monthly_rent_to_client, show_nightly_rate_to_client, show_purchase_price_to_client')
+            .eq('client_id', clientId)
+            .eq('property_id', propertyId)
+            .single()
+
+          if (assignment) {
+            // Only show pricing if both the property has it enabled AND the client assignment allows it
+            showMonthlyRent = showMonthlyRent && (assignment.show_monthly_rent_to_client ?? true)
+            showNightlyRate = showNightlyRate && (assignment.show_nightly_rate_to_client ?? true)
+            showPurchasePrice = showPurchasePrice && (assignment.show_purchase_price_to_client ?? true)
+          }
+        }
+
         setProperty({
           id: data.id,
           address: data.address || "Address not available",
-          monthly_rent: data.monthly_rent || "N/A",
           bedrooms: data.bedrooms || "0",
           bathrooms: data.bathrooms || "0",
           area: data.area || "0",
@@ -75,21 +105,38 @@ export default function PropertyListingPage() {
           description: data.description || null,
           scraped_at: data.scraped_at,
           created_at: data.created_at,
-          managers: (data as any).managers || []
+          managers: (data as any).managers || [],
+          // Pricing display options (with client-specific overrides applied)
+          show_monthly_rent: showMonthlyRent,
+          custom_monthly_rent: (data as any).custom_monthly_rent || null,
+          show_nightly_rate: showNightlyRate,
+          custom_nightly_rate: (data as any).custom_nightly_rate || null,
+          show_purchase_price: showPurchasePrice,
+          custom_purchase_price: (data as any).custom_purchase_price || null,
         })
       }
       setIsLoading(false)
     }
 
     loadProperty()
-  }, [propertyId])
+  }, [propertyId, clientId])
 
   const handleShare = async () => {
     if (!property) return
 
+    // Build pricing text for share
+    let pricingText = ''
+    if (property.show_monthly_rent && property.custom_monthly_rent) {
+      pricingText = `${formatCurrency(property.custom_monthly_rent)}/month`
+    } else if (property.show_nightly_rate && property.custom_nightly_rate) {
+      pricingText = `${formatCurrency(property.custom_nightly_rate)}/night`
+    } else if (property.show_purchase_price && property.custom_purchase_price) {
+      pricingText = formatCurrency(property.custom_purchase_price)
+    }
+
     const shareData = {
       title: `${property.address} - Luxury Property`,
-      text: `Check out this luxury property: ${property.bedrooms} bed, ${property.bathrooms} bath, ${formatNumber(property.area)} sq ft - ${formatCurrency(property.monthly_rent)}/month`,
+      text: `Check out this luxury property: ${property.bedrooms} bed, ${property.bathrooms} bath, ${formatNumber(property.area)} sq ft${pricingText ? ` - ${pricingText}` : ''}`,
       url: window.location.href,
     }
 
@@ -220,19 +267,61 @@ export default function PropertyListingPage() {
                   <span className="break-words">{property.address}</span>
                 </div>
               </div>
-              <div className="text-left lg:text-right w-full lg:w-auto">
-                <div className="relative">
-                  {/* Glow effect */}
-                  <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full"></div>
-                  {/* Price */}
-                  <div className="relative">
-                    <div className="text-4xl sm:text-5xl md:text-6xl luxury-heading text-white mb-2 tracking-wide">
-                      {formatCurrency(property.monthly_rent)}
+              {/* Pricing Display */}
+              {(property.show_monthly_rent || property.show_nightly_rate || property.show_purchase_price) && (() => {
+                // Count how many prices are shown
+                const priceCount = [
+                  property.show_monthly_rent && property.custom_monthly_rent,
+                  property.show_nightly_rate && property.custom_nightly_rate,
+                  property.show_purchase_price && property.custom_purchase_price
+                ].filter(Boolean).length;
+
+                // Adjust font size based on price count
+                const priceSize = priceCount === 1
+                  ? "text-4xl sm:text-5xl md:text-6xl"
+                  : priceCount === 2
+                    ? "text-2xl sm:text-3xl md:text-4xl"
+                    : "text-xl sm:text-2xl md:text-3xl";
+                const labelSize = priceCount === 1 ? "text-sm" : "text-xs";
+                const spacing = priceCount === 1 ? "space-y-4" : "space-y-3";
+
+                return (
+                  <div className="text-left lg:text-right w-full lg:w-auto">
+                    <div className="relative">
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 bg-white/10 blur-2xl rounded-full"></div>
+                      {/* Prices */}
+                      <div className={`relative ${spacing}`}>
+                        {property.show_monthly_rent && property.custom_monthly_rent && (
+                          <div>
+                            <div className={`${priceSize} luxury-heading text-white mb-1 tracking-wide`}>
+                              {formatCurrency(property.custom_monthly_rent)}
+                            </div>
+                            <div className={`${labelSize} text-white/70 uppercase tracking-[0.3em] font-semibold`}>Per Month</div>
+                          </div>
+                        )}
+                        {property.show_nightly_rate && property.custom_nightly_rate && (
+                          <div>
+                            <div className={`${priceSize} luxury-heading text-white mb-1 tracking-wide`}>
+                              {formatCurrency(property.custom_nightly_rate)}
+                            </div>
+                            <div className={`${labelSize} text-white/70 uppercase tracking-[0.3em] font-semibold`}>Per Night</div>
+                            <div className="text-[10px] text-white/50 italic">not including taxes</div>
+                          </div>
+                        )}
+                        {property.show_purchase_price && property.custom_purchase_price && (
+                          <div>
+                            <div className={`${priceSize} luxury-heading text-white mb-1 tracking-wide`}>
+                              {formatCurrency(property.custom_purchase_price)}
+                            </div>
+                            <div className={`${labelSize} text-white/70 uppercase tracking-[0.3em] font-semibold`}>Purchase Price</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-sm text-white/70 uppercase tracking-[0.3em] font-semibold">Per Month</div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
             {/* Decorative divider */}
@@ -384,10 +473,6 @@ export default function PropertyListingPage() {
                   <span className="font-bold text-white text-right ml-4">{property.address}</span>
                 </div>
                 <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
-                  <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Monthly Rent</span>
-                  <span className="font-bold text-white text-lg">{formatCurrency(property.monthly_rent)}</span>
-                </div>
-                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
                   <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Bedrooms</span>
                   <span className="font-bold text-white text-lg">{formatPropertyValue(property.bedrooms)}</span>
                 </div>
@@ -395,10 +480,32 @@ export default function PropertyListingPage() {
                   <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Bathrooms</span>
                   <span className="font-bold text-white text-lg">{formatPropertyValue(property.bathrooms)}</span>
                 </div>
-                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300 sm:col-span-2">
+                <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
                   <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Area</span>
                   <span className="font-bold text-white text-lg">{isValidPropertyValue(property.area) ? `${formatNumber(property.area)} sq ft` : '—'}</span>
                 </div>
+                {/* Pricing Details */}
+                {property.show_monthly_rent && property.custom_monthly_rent && (
+                  <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                    <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Monthly Rent</span>
+                    <span className="font-bold text-white text-lg">{formatCurrency(property.custom_monthly_rent)}</span>
+                  </div>
+                )}
+                {property.show_nightly_rate && property.custom_nightly_rate && (
+                  <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                    <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Nightly Rate</span>
+                    <div className="text-right">
+                      <span className="font-bold text-white text-lg">{formatCurrency(property.custom_nightly_rate)}</span>
+                      <div className="text-xs text-white/50 italic">not including taxes</div>
+                    </div>
+                  </div>
+                )}
+                {property.show_purchase_price && property.custom_purchase_price && (
+                  <div className="flex justify-between items-center p-5 glass-card-accent rounded-xl border border-white/20 hover:scale-105 transition-transform duration-300">
+                    <span className="text-white/70 font-semibold uppercase tracking-wider text-sm">Purchase Price</span>
+                    <span className="font-bold text-white text-lg">{formatCurrency(property.custom_purchase_price)}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

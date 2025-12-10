@@ -210,11 +210,61 @@ export default function PaymentPage() {
           <p className="text-white/60">Invoice {invoiceNumber}</p>
         </div>
 
-        {/* Amount Card */}
+        {/* Invoice Summary Card */}
         <Card className="glass-card-accent border-white/20 mb-8">
-          <CardContent className="p-6 text-center">
-            <p className="text-white/60 text-sm uppercase tracking-wider mb-2">Amount Due</p>
-            <p className="text-white text-4xl font-bold">{formatCurrency(invoice?.total || 0)}</p>
+          <CardContent className="p-6">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <p className="text-white/60 text-sm uppercase tracking-wider mb-1">Invoice Summary</p>
+                <p className="text-white font-mono">{invoice?.invoice_number}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white/60 text-sm">Due Date</p>
+                <p className="text-white font-medium">
+                  {invoice?.due_date && new Date(invoice.due_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </p>
+              </div>
+            </div>
+
+            {/* Line Items */}
+            <div className="border-t border-white/10 pt-4 mb-4">
+              {invoice?.line_items.map((item, index) => (
+                <div key={index} className="flex justify-between py-2 text-sm">
+                  <div className="text-white/80">
+                    <span>{item.description}</span>
+                    <span className="text-white/50 ml-2">x{item.quantity}</span>
+                  </div>
+                  <span className="text-white">{formatCurrency(item.total)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Subtotal and Tax */}
+            <div className="border-t border-white/10 pt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/60">Subtotal</span>
+                <span className="text-white">{formatCurrency(invoice?.subtotal || 0)}</span>
+              </div>
+              {invoice?.tax_rate && invoice.tax_rate > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/60">Tax ({invoice.tax_rate}%)</span>
+                  <span className="text-white">{formatCurrency(invoice?.tax_amount || 0)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Total */}
+            <div className="border-t border-white/20 mt-4 pt-4">
+              <div className="flex justify-between items-center">
+                <span className="text-white/60 text-sm uppercase tracking-wider">Total Due</span>
+                <span className="text-white text-3xl font-bold">{formatCurrency(invoice?.total || 0)}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -287,10 +337,14 @@ export default function PaymentPage() {
               </div>
 
               {/* Test Card Notice */}
-              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                <p className="text-blue-300 text-sm">
-                  <strong>Demo Mode:</strong> Use any card number (e.g., 4242 4242 4242 4242) with any future expiry date and any 3-digit CVV.
-                </p>
+              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 space-y-2">
+                <p className="text-blue-300 text-sm font-medium">Demo Mode - Test Cards</p>
+                <div className="text-blue-300/80 text-xs space-y-1">
+                  <p><span className="font-mono bg-blue-500/20 px-1.5 py-0.5 rounded">4242 4242 4242 4242</span> - Successful payment</p>
+                  <p><span className="font-mono bg-red-500/20 px-1.5 py-0.5 rounded text-red-300">4000 0000 0000 0002</span> - Card declined</p>
+                  <p><span className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded text-yellow-300">4000 0000 0000 9995</span> - Insufficient funds</p>
+                </div>
+                <p className="text-blue-300/60 text-xs mt-2">Use any future expiry date and any 3-digit CVV.</p>
               </div>
 
               {/* Submit Button */}

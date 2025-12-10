@@ -431,6 +431,15 @@ export async function markInvoiceAsPaid(invoiceId: string) {
   return { success: true }
 }
 
+// Simulated declined card numbers (matching Stripe test cards)
+const DECLINED_CARDS: Record<string, string> = {
+  '4000000000000002': 'Your card was declined. Please try a different card.',
+  '4000000000009995': 'Your card has insufficient funds. Please try a different card.',
+  '4000000000000069': 'Your card has expired. Please try a different card.',
+  '4000000000000127': 'Incorrect CVV. Please check your card details and try again.',
+  '4000000000000119': 'A processing error occurred. Please try again.',
+}
+
 // Process simulated payment
 export async function processPayment(invoiceNumber: string, paymentDetails: {
   cardNumber: string
@@ -440,10 +449,10 @@ export async function processPayment(invoiceNumber: string, paymentDetails: {
 }) {
   const supabase = await createClient()
 
-  // Get invoice
+  // Get full invoice details for email
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
-    .select('id, status')
+    .select('*')
     .eq('invoice_number', invoiceNumber)
     .single()
 
@@ -459,17 +468,24 @@ export async function processPayment(invoiceNumber: string, paymentDetails: {
     return { error: 'Invoice has not been sent yet' }
   }
 
-  // Simulate payment processing (always succeeds for demo)
-  // In production, this would integrate with Stripe
-  await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate API delay
+  // Simulate payment processing delay
+  await new Promise(resolve => setTimeout(resolve, 1500))
+
+  // Check for simulated declined cards
+  const cardNumber = paymentDetails.cardNumber.replace(/\s/g, '')
+  const declineReason = DECLINED_CARDS[cardNumber]
+  if (declineReason) {
+    return { error: declineReason }
+  }
 
   // Mark as paid
+  const paidAt = new Date().toISOString()
   const { error: updateError } = await supabase
     .from('invoices')
     .update({
       status: 'paid',
-      paid_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      paid_at: paidAt,
+      updated_at: paidAt,
     })
     .eq('id', invoice.id)
 
@@ -477,5 +493,142 @@ export async function processPayment(invoiceNumber: string, paymentDetails: {
     return { error: updateError.message }
   }
 
+  // Send confirmation email (non-blocking)
+  sendPaymentConfirmationEmail({
+    clientName: invoice.client_name,
+    clientEmail: invoice.client_email,
+    invoiceNumber: invoice.invoice_number,
+    total: invoice.total,
+    paidAt,
+  }).catch(err => console.error('Failed to send confirmation email:', err))
+
   return { success: true }
+}
+
+// Send payment confirmation email
+async function sendPaymentConfirmationEmail(data: {
+  clientName: string
+  clientEmail: string
+  invoiceNumber: string
+  total: number
+  paidAt: string
+}) {
+  // Dynamic import to avoid issues with server actions
+  const nodemailer = await import('nodemailer')
+
+  const transporter = nodemailer.default.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM,
+    to: data.clientEmail,
+    subject: `Payment Confirmed - Invoice ${data.invoiceNumber}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 28px; font-weight: bold; letter-spacing: 3px; margin-bottom: 5px; }
+            .tagline { font-size: 12px; letter-spacing: 4px; color: #c9a227; text-transform: uppercase; }
+            .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
+            .success-badge { display: inline-block; background: #dcfce7; color: #166534; padding: 10px 20px; border-radius: 25px; font-weight: bold; margin-bottom: 20px; }
+            .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
+            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; font-weight: bold; font-size: 18px; padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; }
+            .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
+            .footer-text { font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">CADIZ & LLUIS</div>
+              <div class="tagline">Luxury Living</div>
+            </div>
+            <div class="content">
+              <div style="text-align: center;">
+                <div class="success-badge">Payment Successful</div>
+              </div>
+              <p>Dear ${data.clientName},</p>
+              <p>Thank you for your payment. This email confirms that we have received your payment for Invoice <strong>${data.invoiceNumber}</strong>.</p>
+
+              <div class="detail-box">
+                <div class="detail-row">
+                  <span>Invoice Number</span>
+                  <span>${data.invoiceNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span>Payment Date</span>
+                  <span>${formatDate(data.paidAt)}</span>
+                </div>
+                <div class="detail-row">
+                  <span>Amount Paid</span>
+                  <span>${formatCurrency(data.total)}</span>
+                </div>
+              </div>
+
+              <p>A copy of your paid invoice is available for download. If you have any questions about this payment, please don't hesitate to contact us.</p>
+
+              <p style="margin-top: 30px;">Best regards,<br><strong>The Cadiz & Lluis Team</strong></p>
+            </div>
+            <div class="footer">
+              <p class="footer-text">
+                <strong>Cadiz & Lluis - Luxury Living</strong><br>
+                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+Payment Confirmation - Invoice ${data.invoiceNumber}
+
+Dear ${data.clientName},
+
+Thank you for your payment. This email confirms that we have received your payment.
+
+Invoice Number: ${data.invoiceNumber}
+Payment Date: ${formatDate(data.paidAt)}
+Amount Paid: ${formatCurrency(data.total)}
+
+If you have any questions about this payment, please don't hesitate to contact us.
+
+Best regards,
+The Cadiz & Lluis Team
+
+Cadiz & Lluis - Luxury Living
+${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+    `,
+  }
+
+  await transporter.sendMail(mailOptions)
 }

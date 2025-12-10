@@ -621,6 +621,12 @@ export default function EditPropertyPage() {
       <PropertyCustomizationDialog
         propertyId={propertyId}
         currentSettings={customizationSettings}
+        propertyData={{
+          address: formData.address,
+          bedrooms: formData.bedrooms,
+          bathrooms: formData.bathrooms,
+          area: formData.area,
+        }}
         isOpen={isCustomizationOpen}
         onClose={() => setIsCustomizationOpen(false)}
       />

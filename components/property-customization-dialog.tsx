@@ -9,12 +9,19 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { updatePropertyCustomization, resetPropertyCustomization, type PropertyCustomization } from '@/lib/actions/properties'
-import { Eye, EyeOff, RotateCcw, Save, X } from 'lucide-react'
+import { Eye, EyeOff, RotateCcw, Save, X, Bed, Bath, Square, MapPin } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface PropertyCustomizationDialogProps {
   propertyId: string
   currentSettings: PropertyCustomization
+  propertyData?: {
+    address?: string
+    bedrooms?: string
+    bathrooms?: string
+    area?: string
+  }
   isOpen: boolean
   onClose: () => void
 }
@@ -22,6 +29,7 @@ interface PropertyCustomizationDialogProps {
 export function PropertyCustomizationDialog({
   propertyId,
   currentSettings,
+  propertyData,
   isOpen,
   onClose,
 }: PropertyCustomizationDialogProps) {
@@ -134,6 +142,17 @@ export function PropertyCustomizationDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <Tabs defaultValue="settings" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 mx-6 mt-4" style={{ width: 'calc(100% - 3rem)' }}>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-white/20 text-white">
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="data-[state=active]:bg-white/20 text-white">
+              Live Preview
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="settings" className="mt-0">
         <div className="space-y-8 py-6 px-6">
           {/* Field Visibility Section */}
           <div className="space-y-4">
@@ -343,6 +362,156 @@ export function PropertyCustomizationDialog({
             />
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="preview" className="mt-0">
+            <div className="py-6 px-6 space-y-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-1 w-12 divider-accent"></div>
+                <h3 className="luxury-heading text-xl sm:text-2xl tracking-[0.1em] text-white">
+                  Client View Preview
+                </h3>
+              </div>
+              <p className="text-sm text-white/60 tracking-wide mb-6">
+                This is how the property will appear to clients with your current settings
+              </p>
+
+              {/* Preview Card */}
+              <div className="glass-card-accent rounded-2xl border border-white/20 overflow-hidden">
+                {/* Preview Header - Address */}
+                {showAddress ? (
+                  <div className="p-6 border-b border-white/10">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-white/80 flex-shrink-0 mt-1" />
+                      <h3 className="text-xl font-bold text-white tracking-wide">
+                        {propertyData?.address || '123 Example Street, City, State'}
+                      </h3>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 border-b border-white/10 bg-red-500/10">
+                    <div className="flex items-center gap-2 text-red-400">
+                      <EyeOff className="h-4 w-4" />
+                      <span className="text-sm">Address hidden from clients</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview Stats */}
+                <div className="p-6">
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Bedrooms */}
+                    {showBedrooms ? (
+                      <div className="text-center p-4 glass-card-accent rounded-xl">
+                        <Bed className="h-6 w-6 mx-auto mb-2 text-white" />
+                        <p className="text-2xl font-bold text-white">{propertyData?.bedrooms || '3'}</p>
+                        <p className="text-[10px] text-white/70 uppercase tracking-widest mt-1.5 font-semibold">
+                          {labelBedrooms}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 glass-card-accent rounded-xl bg-red-500/10 border border-red-500/20">
+                        <Bed className="h-6 w-6 mx-auto mb-2 text-red-400/50" />
+                        <EyeOff className="h-4 w-4 mx-auto text-red-400" />
+                        <p className="text-[10px] text-red-400 uppercase tracking-widest mt-1.5">Hidden</p>
+                      </div>
+                    )}
+
+                    {/* Bathrooms */}
+                    {showBathrooms ? (
+                      <div className="text-center p-4 glass-card-accent rounded-xl">
+                        <Bath className="h-6 w-6 mx-auto mb-2 text-white" />
+                        <p className="text-2xl font-bold text-white">{propertyData?.bathrooms || '2'}</p>
+                        <p className="text-[10px] text-white/70 uppercase tracking-widest mt-1.5 font-semibold">
+                          {labelBathrooms}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 glass-card-accent rounded-xl bg-red-500/10 border border-red-500/20">
+                        <Bath className="h-6 w-6 mx-auto mb-2 text-red-400/50" />
+                        <EyeOff className="h-4 w-4 mx-auto text-red-400" />
+                        <p className="text-[10px] text-red-400 uppercase tracking-widest mt-1.5">Hidden</p>
+                      </div>
+                    )}
+
+                    {/* Area */}
+                    {showArea ? (
+                      <div className="text-center p-4 glass-card-accent rounded-xl">
+                        <Square className="h-6 w-6 mx-auto mb-2 text-white" />
+                        <p className="text-2xl font-bold text-white">{propertyData?.area || '1,500'}</p>
+                        <p className="text-[10px] text-white/70 uppercase tracking-widest mt-1.5 font-semibold">
+                          {labelArea}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 glass-card-accent rounded-xl bg-red-500/10 border border-red-500/20">
+                        <Square className="h-6 w-6 mx-auto mb-2 text-red-400/50" />
+                        <EyeOff className="h-4 w-4 mx-auto text-red-400" />
+                        <p className="text-[10px] text-red-400 uppercase tracking-widest mt-1.5">Hidden</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Images Preview */}
+                  <div className="mt-6">
+                    {showImages ? (
+                      <div className="h-32 bg-white/5 rounded-xl border border-white/20 flex items-center justify-center">
+                        <span className="text-white/50 text-sm">Property images will be displayed</span>
+                      </div>
+                    ) : (
+                      <div className="h-32 bg-red-500/10 rounded-xl border border-red-500/20 flex items-center justify-center gap-2">
+                        <EyeOff className="h-5 w-5 text-red-400" />
+                        <span className="text-red-400 text-sm">Images hidden from clients</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Custom Notes Preview */}
+                  {customNotes && (
+                    <div className="mt-6 p-4 glass-card-accent rounded-xl border border-blue-400/30 bg-blue-500/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-1 w-8 bg-gradient-to-r from-blue-400 to-purple-500"></div>
+                        <h4 className="text-sm font-semibold text-white uppercase tracking-wider">Important Information</h4>
+                      </div>
+                      <p className="text-white/80 text-sm whitespace-pre-wrap">{customNotes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview Summary */}
+              <div className="p-4 glass-card-accent rounded-xl border border-white/10">
+                <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Settings Summary</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    {showAddress ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-red-400" />}
+                    <span className={showAddress ? 'text-white/70' : 'text-red-400'}>Address</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {showBedrooms ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-red-400" />}
+                    <span className={showBedrooms ? 'text-white/70' : 'text-red-400'}>{labelBedrooms}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {showBathrooms ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-red-400" />}
+                    <span className={showBathrooms ? 'text-white/70' : 'text-red-400'}>{labelBathrooms}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {showArea ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-red-400" />}
+                    <span className={showArea ? 'text-white/70' : 'text-red-400'}>{labelArea}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {showImages ? <Eye className="h-4 w-4 text-green-400" /> : <EyeOff className="h-4 w-4 text-red-400" />}
+                    <span className={showImages ? 'text-white/70' : 'text-red-400'}>Images</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {customNotes ? <Eye className="h-4 w-4 text-blue-400" /> : <EyeOff className="h-4 w-4 text-white/30" />}
+                    <span className={customNotes ? 'text-white/70' : 'text-white/30'}>Custom Notes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 pb-6 px-6 border-t border-white/10">
           <Button

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { Home, LogOut, Building2, UserCheck, User as UserIcon } from 'lucide-react'
+import { Home, LogOut, Building2, UserCheck, User as UserIcon, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function AdminSidebar({ user }: { user: User }) {
@@ -37,6 +37,12 @@ export function AdminSidebar({ user }: { user: User }) {
       href: '/admin/properties',
       icon: Home,
       active: pathname === '/admin' || pathname === '/admin/properties' || pathname.startsWith('/admin/properties/')
+    },
+    {
+      label: 'Invoices',
+      href: '/admin/invoices',
+      icon: FileText,
+      active: pathname === '/admin/invoices' || pathname.startsWith('/admin/invoices/')
     }
   ]
 

@@ -285,10 +285,20 @@ function PropertyCard({
                 )}
               </div>
 
-              {/* Monthly Rent */}
-              {property.monthly_rent && (
+              {/* Pricing Display */}
+              {property.show_monthly_rent && property.custom_monthly_rent && (
                 <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/25 font-semibold">
-                  {formatCurrency(property.monthly_rent)}/mo
+                  {formatCurrency(property.custom_monthly_rent)}/mo
+                </Badge>
+              )}
+              {property.show_nightly_rate && property.custom_nightly_rate && !property.show_monthly_rent && (
+                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/25 font-semibold">
+                  {formatCurrency(property.custom_nightly_rate)}/night
+                </Badge>
+              )}
+              {property.show_purchase_price && property.custom_purchase_price && !property.show_monthly_rent && !property.show_nightly_rate && (
+                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/25 font-semibold">
+                  {formatCurrency(property.custom_purchase_price)}
                 </Badge>
               )}
             </div>

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { Home, Users, LogOut, Building2, UserCog } from 'lucide-react'
+import { Home, LogOut, Building2, UserCheck, User as UserIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function AdminSidebar({ user }: { user: User }) {
@@ -21,22 +21,22 @@ export function AdminSidebar({ user }: { user: User }) {
 
   const navItems = [
     {
+      label: 'Profile',
+      href: '/admin/profile',
+      icon: UserIcon,
+      active: pathname === '/admin/profile'
+    },
+    {
+      label: 'Clients',
+      href: '/admin/clients',
+      icon: UserCheck,
+      active: pathname === '/admin/clients' || pathname.startsWith('/admin/client/')
+    },
+    {
       label: 'Properties',
       href: '/admin/properties',
       icon: Home,
       active: pathname === '/admin' || pathname === '/admin/properties' || pathname.startsWith('/admin/properties/')
-    },
-    {
-      label: 'Managers',
-      href: '/admin/managers',
-      icon: Users,
-      active: pathname === '/admin/managers' || pathname.startsWith('/admin/manager/')
-    },
-    {
-      label: 'Users',
-      href: '/admin/users',
-      icon: UserCog,
-      active: pathname === '/admin/users' || pathname.startsWith('/admin/users/')
     }
   ]
 

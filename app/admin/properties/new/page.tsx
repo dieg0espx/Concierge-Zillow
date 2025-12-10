@@ -7,27 +7,28 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { Home, Users, Sparkles, ArrowLeft, CheckCircle2, Edit3, Link2, Wand2 } from "lucide-react"
+import { Home, Sparkles, ArrowLeft, CheckCircle2, Edit3, Link2, DollarSign } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { saveProperty } from "@/lib/supabase"
-import { PropertyManagerSelect, PropertyManager } from "@/components/property-manager-select"
 import { assignPropertyToManagers } from "@/lib/actions/properties"
-import { createClient } from "@/lib/supabase/client"
+import { getCurrentManagerProfile } from "@/lib/actions/clients"
 import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AddPropertyPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [inputMode, setInputMode] = useState<"scrape" | "manual">("scrape")
   const [url, setUrl] = useState("")
   const [isScraping, setIsScraping] = useState(false)
-  const [propertyManagers, setPropertyManagers] = useState<PropertyManager[]>([])
-  const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([])
+  const [currentManagerId, setCurrentManagerId] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
 
   // Function to generate AI description
   const generateAIDescription = async (propertyId: string, propertyData: {
     address?: string
-    monthly_rent?: string
     bedrooms?: string
     bathrooms?: string
     area?: string
@@ -40,7 +41,6 @@ export default function AddPropertyPage() {
         body: JSON.stringify({
           propertyId,
           address: propertyData.address,
-          monthly_rent: propertyData.monthly_rent,
           bedrooms: propertyData.bedrooms,
           bathrooms: propertyData.bathrooms,
           area: propertyData.area,
@@ -48,7 +48,9 @@ export default function AddPropertyPage() {
       })
 
       if (!response.ok) {
-        console.error('Failed to generate AI description')
+        const errorData = await response.json().catch(() => ({}))
+        console.warn('AI description generation failed:', errorData.error || 'Unknown error')
+        console.log('Continuing without AI description - using Zillow description if available')
         return false
       }
 
@@ -56,7 +58,8 @@ export default function AddPropertyPage() {
       console.log('AI description generated:', data.description?.substring(0, 100) + '...')
       return true
     } catch (error) {
-      console.error('Error generating AI description:', error)
+      console.warn('Error generating AI description:', error)
+      console.log('Continuing without AI description')
       return false
     } finally {
       setIsGeneratingDescription(false)
@@ -66,7 +69,6 @@ export default function AddPropertyPage() {
   // Manual input fields
   const [manualData, setManualData] = useState({
     address: "",
-    monthly_rent: "",
     bedrooms: "",
     bathrooms: "",
     area: "",
@@ -75,24 +77,35 @@ export default function AddPropertyPage() {
     description: ""
   })
 
-  useEffect(() => {
-    async function loadManagers() {
-      const supabase = createClient()
-      const { data: managers } = await supabase
-        .from('property_managers')
-        .select('id, name, email')
-        .order('name')
+  // Pricing options state
+  const [pricingOptions, setPricingOptions] = useState({
+    show_monthly_rent: false,
+    custom_monthly_rent: "",
+    show_nightly_rate: false,
+    custom_nightly_rate: "",
+    show_purchase_price: false,
+    custom_purchase_price: ""
+  })
 
-      if (managers) {
-        setPropertyManagers(managers)
+  useEffect(() => {
+    async function loadCurrentManager() {
+      // Use the server action to get the current manager profile
+      const { data: managerProfile } = await getCurrentManagerProfile()
+
+      if (managerProfile) {
+        setCurrentManagerId(managerProfile.id)
       }
     }
-    loadManagers()
+    loadCurrentManager()
   }, [])
 
   const handleManualSave = async () => {
     if (!manualData.address.trim()) {
-      alert('Please enter at least the property address')
+      toast({
+        title: "Address Required",
+        description: "Please enter at least the property address",
+        variant: "destructive",
+      })
       return
     }
 
@@ -108,13 +121,19 @@ export default function AddPropertyPage() {
 
       const newProperty = {
         address: manualData.address,
-        monthly_rent: manualData.monthly_rent || "",
         bedrooms: manualData.bedrooms || "",
         bathrooms: manualData.bathrooms || "",
         area: manualData.area || "",
         zillow_url: manualData.zillow_url || "",
         images: imageUrls,
-        description: manualData.description || undefined
+        description: manualData.description || undefined,
+        // Pricing options
+        show_monthly_rent: pricingOptions.show_monthly_rent,
+        custom_monthly_rent: pricingOptions.custom_monthly_rent ? Number(pricingOptions.custom_monthly_rent) : null,
+        show_nightly_rate: pricingOptions.show_nightly_rate,
+        custom_nightly_rate: pricingOptions.custom_nightly_rate ? Number(pricingOptions.custom_nightly_rate) : null,
+        show_purchase_price: pricingOptions.show_purchase_price,
+        custom_purchase_price: pricingOptions.custom_purchase_price ? Number(pricingOptions.custom_purchase_price) : null,
       }
 
       console.log('Property to save:', newProperty)
@@ -122,9 +141,9 @@ export default function AddPropertyPage() {
       const savedProperty = await saveProperty(newProperty)
       console.log('Saved property:', savedProperty)
 
-      // Assign to managers if any selected
-      if (selectedManagerIds.length > 0 && savedProperty.id) {
-        await assignPropertyToManagers(savedProperty.id, selectedManagerIds)
+      // Auto-assign to current logged-in manager
+      if (currentManagerId && savedProperty.id) {
+        await assignPropertyToManagers(savedProperty.id, [currentManagerId])
       }
 
       // Auto-generate AI description if no description was provided
@@ -132,7 +151,6 @@ export default function AddPropertyPage() {
         console.log('Generating AI description...')
         await generateAIDescription(savedProperty.id, {
           address: manualData.address,
-          monthly_rent: manualData.monthly_rent,
           bedrooms: manualData.bedrooms,
           bathrooms: manualData.bathrooms,
           area: manualData.area,
@@ -142,7 +160,6 @@ export default function AddPropertyPage() {
       setSuccess(true)
       setManualData({
         address: "",
-        monthly_rent: "",
         bedrooms: "",
         bathrooms: "",
         area: "",
@@ -150,7 +167,14 @@ export default function AddPropertyPage() {
         images: "",
         description: ""
       })
-      setSelectedManagerIds([])
+      setPricingOptions({
+        show_monthly_rent: false,
+        custom_monthly_rent: "",
+        show_nightly_rate: false,
+        custom_nightly_rate: "",
+        show_purchase_price: false,
+        custom_purchase_price: ""
+      })
 
       // Redirect after 2 seconds
       setTimeout(() => {
@@ -158,7 +182,11 @@ export default function AddPropertyPage() {
       }, 2000)
     } catch (error) {
       console.error('Error saving property:', error)
-      alert(`Failed to save property: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({
+        title: "Failed to Save Property",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      })
     } finally {
       setIsScraping(false)
     }
@@ -178,6 +206,9 @@ export default function AddPropertyPage() {
         throw new Error('HasData API key is not configured')
       }
 
+      console.log('Attempting to scrape URL:', url.trim())
+      console.log('Using API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET')
+
       const response = await fetch('https://api.hasdata.com/scrape/zillow/property', {
         method: 'POST',
         headers: {
@@ -191,8 +222,43 @@ export default function AddPropertyPage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Failed to scrape property: ${response.statusText}`)
+        const responseText = await response.text()
+        console.error('Scraping API error response:', responseText)
+
+        let errorData: any = {}
+        try {
+          errorData = JSON.parse(responseText)
+        } catch (e) {
+          // Response is not JSON
+        }
+
+        // Build a helpful error message
+        let errorMessage = 'Unknown error occurred'
+
+        if (response.status === 400) {
+          errorMessage = 'Invalid Zillow URL or property not found. Please check:\n' +
+            '• The URL is a valid Zillow property listing\n' +
+            '• The property is currently active on Zillow\n' +
+            '• You copied the complete URL from your browser'
+        } else if (response.status === 401 || response.status === 403) {
+          errorMessage = 'API authentication failed. Please check your HasData API key.'
+        } else if (response.status === 429) {
+          errorMessage = 'Rate limit exceeded. Please wait a moment and try again.'
+        } else if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (errorData.error) {
+          errorMessage = errorData.error
+        }
+
+        console.error('Scraping API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText,
+          errorData,
+          url: url.trim()
+        })
+
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -401,7 +467,14 @@ export default function AddPropertyPage() {
         area: typeof area === 'number' ? area.toString() : area,
         zillow_url: url.trim(),
         images: cloudinaryImageUrls,
-        description: propertyData.description || null
+        description: propertyData.description || null,
+        // Pricing options
+        show_monthly_rent: pricingOptions.show_monthly_rent,
+        custom_monthly_rent: pricingOptions.custom_monthly_rent ? Number(pricingOptions.custom_monthly_rent) : null,
+        show_nightly_rate: pricingOptions.show_nightly_rate,
+        custom_nightly_rate: pricingOptions.custom_nightly_rate ? Number(pricingOptions.custom_nightly_rate) : null,
+        show_purchase_price: pricingOptions.show_purchase_price,
+        custom_purchase_price: pricingOptions.custom_purchase_price ? Number(pricingOptions.custom_purchase_price) : null,
       }
 
       console.log('Property to save:', newProperty)
@@ -409,26 +482,30 @@ export default function AddPropertyPage() {
       const savedProperty = await saveProperty(newProperty)
       console.log('Saved property:', savedProperty)
 
-      // Assign to managers if any selected
-      if (selectedManagerIds.length > 0 && savedProperty.id) {
-        await assignPropertyToManagers(savedProperty.id, selectedManagerIds)
+      // Auto-assign to current logged-in manager
+      if (currentManagerId && savedProperty.id) {
+        await assignPropertyToManagers(savedProperty.id, [currentManagerId])
       }
 
       // Always generate AI description for scraped properties (replaces Zillow description)
       if (savedProperty.id) {
         console.log('Generating AI description for scraped property...')
-        await generateAIDescription(savedProperty.id, {
+        const aiGenerated = await generateAIDescription(savedProperty.id, {
           address: newProperty.address,
           monthly_rent: newProperty.monthly_rent,
           bedrooms: newProperty.bedrooms,
           bathrooms: newProperty.bathrooms,
           area: newProperty.area,
         })
+        if (aiGenerated) {
+          console.log('AI description generated successfully')
+        } else {
+          console.log('AI description generation skipped or failed - property saved with Zillow description')
+        }
       }
 
       setSuccess(true)
       setUrl("")
-      setSelectedManagerIds([])
 
       // Redirect after 2 seconds
       setTimeout(() => {
@@ -436,7 +513,11 @@ export default function AddPropertyPage() {
       }, 2000)
     } catch (error) {
       console.error('Error scraping property:', error)
-      alert(`Failed to scrape property: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({
+        title: "Failed to Scrape Property",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      })
     } finally {
       setIsScraping(false)
     }
@@ -461,7 +542,7 @@ export default function AddPropertyPage() {
               Add New Property
             </h1>
             <p className="text-white/70 mt-2 tracking-wide text-lg">
-              Scrape property details from Zillow and assign to managers
+              Scrape property details from Zillow or enter manually
             </p>
           </div>
         </div>
@@ -502,6 +583,7 @@ export default function AddPropertyPage() {
                 size="sm"
                 onClick={() => setInputMode("scrape")}
                 className={inputMode === "scrape" ? "btn-luxury" : "border-white/40 hover:bg-white/10 text-white"}
+                disabled={isScraping}
               >
                 <Link2 className="h-4 w-4 mr-2" />
                 Scrape
@@ -511,6 +593,7 @@ export default function AddPropertyPage() {
                 size="sm"
                 onClick={() => setInputMode("manual")}
                 className={inputMode === "manual" ? "btn-luxury" : "border-white/40 hover:bg-white/10 text-white"}
+                disabled={isScraping}
               >
                 <Edit3 className="h-4 w-4 mr-2" />
                 Manual
@@ -557,20 +640,7 @@ export default function AddPropertyPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <label className="text-sm font-bold uppercase tracking-wider text-white-light">
-                    Monthly Rent
-                  </label>
-                  <Input
-                    placeholder="$2,500"
-                    value={manualData.monthly_rent}
-                    onChange={(e) => setManualData({...manualData, monthly_rent: e.target.value})}
-                    className="h-14 bg-white/5 border-white/30 focus:border-white text-base tracking-wide"
-                    disabled={isScraping}
-                  />
-                </div>
-
+              <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-4">
                   <label className="text-sm font-bold uppercase tracking-wider text-white-light">
                     Bedrooms
@@ -583,9 +653,7 @@ export default function AddPropertyPage() {
                     disabled={isScraping}
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <label className="text-sm font-bold uppercase tracking-wider text-white-light">
                     Bathrooms
@@ -654,24 +722,93 @@ export default function AddPropertyPage() {
             </>
           )}
 
-          {/* Property Managers Selection */}
-          <div className="space-y-4">
+          {/* Pricing Display Options */}
+          <div className="space-y-6">
             <label className="text-sm font-bold flex items-center gap-3 uppercase tracking-wider text-white-light">
-              <Users className="h-5 w-5" />
-              Assign to Property Managers
+              <DollarSign className="h-5 w-5" />
+              Pricing Display Options
               <Badge variant="secondary" className="ml-2 bg-white/10 text-white/80 border-white/40">
                 Optional
               </Badge>
             </label>
-            <PropertyManagerSelect
-              managers={propertyManagers}
-              selectedManagerIds={selectedManagerIds}
-              onSelectionChange={setSelectedManagerIds}
-            />
+            <div className="glass-card-accent p-6 rounded-lg space-y-6">
+              {/* Monthly Rent */}
+              <div className="flex items-center gap-4">
+                <Checkbox
+                  id="show_monthly_rent"
+                  checked={pricingOptions.show_monthly_rent}
+                  onCheckedChange={(checked) => setPricingOptions(prev => ({ ...prev, show_monthly_rent: !!checked }))}
+                  className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="show_monthly_rent" className="text-white font-medium cursor-pointer">Monthly Rent</Label>
+                    <span className="text-white/50 text-sm">(for long-term rentals)</span>
+                  </div>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 50000"
+                    value={pricingOptions.custom_monthly_rent}
+                    onChange={(e) => setPricingOptions(prev => ({ ...prev, custom_monthly_rent: e.target.value }))}
+                    className={`h-12 bg-white/5 border-white/30 focus:border-white text-base ${!pricingOptions.show_monthly_rent ? 'opacity-50' : ''}`}
+                    disabled={isScraping || !pricingOptions.show_monthly_rent}
+                  />
+                </div>
+              </div>
+
+              {/* Nightly Rate */}
+              <div className="flex items-center gap-4">
+                <Checkbox
+                  id="show_nightly_rate"
+                  checked={pricingOptions.show_nightly_rate}
+                  onCheckedChange={(checked) => setPricingOptions(prev => ({ ...prev, show_nightly_rate: !!checked }))}
+                  className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="show_nightly_rate" className="text-white font-medium cursor-pointer">Nightly Rate</Label>
+                    <span className="text-white/50 text-sm">(for short-term rentals)</span>
+                  </div>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 1750"
+                    value={pricingOptions.custom_nightly_rate}
+                    onChange={(e) => setPricingOptions(prev => ({ ...prev, custom_nightly_rate: e.target.value }))}
+                    className={`h-12 bg-white/5 border-white/30 focus:border-white text-base ${!pricingOptions.show_nightly_rate ? 'opacity-50' : ''}`}
+                    disabled={isScraping || !pricingOptions.show_nightly_rate}
+                  />
+                  <p className="text-xs text-white/50 mt-1">Will display "not including taxes"</p>
+                </div>
+              </div>
+
+              {/* Purchase Price */}
+              <div className="flex items-center gap-4">
+                <Checkbox
+                  id="show_purchase_price"
+                  checked={pricingOptions.show_purchase_price}
+                  onCheckedChange={(checked) => setPricingOptions(prev => ({ ...prev, show_purchase_price: !!checked }))}
+                  className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="show_purchase_price" className="text-white font-medium cursor-pointer">Purchase Price</Label>
+                    <span className="text-white/50 text-sm">(for property sales)</span>
+                  </div>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 10000000"
+                    value={pricingOptions.custom_purchase_price}
+                    onChange={(e) => setPricingOptions(prev => ({ ...prev, custom_purchase_price: e.target.value }))}
+                    className={`h-12 bg-white/5 border-white/30 focus:border-white text-base ${!pricingOptions.show_purchase_price ? 'opacity-50' : ''}`}
+                    disabled={isScraping || !pricingOptions.show_purchase_price}
+                  />
+                </div>
+              </div>
+            </div>
             <div className="glass-card-accent p-4 rounded-lg">
               <p className="text-sm text-white/80 flex items-start gap-3 tracking-wide">
                 <span className="text-white text-lg">•</span>
-                <span>Select one or more property managers who will have access to this property. You can always modify assignments later.</span>
+                <span>Select which pricing options to display on the property page. You can enable multiple pricing types if the property is available for rent and sale.</span>
               </p>
             </div>
           </div>
@@ -692,13 +829,7 @@ export default function AddPropertyPage() {
                 </div>
               ) : (
                 <div className="text-white/60 text-sm tracking-wide">
-                  {selectedManagerIds.length > 0 ? (
-                    <span className="text-white">
-                      {selectedManagerIds.length} manager{selectedManagerIds.length > 1 ? 's' : ''} will be assigned
-                    </span>
-                  ) : (
-                    <span>No managers assigned - you can add them later</span>
-                  )}
+                  <span>Property will be automatically assigned to you</span>
                 </div>
               )}
               <Button
@@ -751,11 +882,7 @@ export default function AddPropertyPage() {
               </p>
               <p className="flex items-start gap-3">
                 <span className="text-white font-bold">3.</span>
-                Optionally assign property managers who will have access to this listing
-              </p>
-              <p className="flex items-start gap-3">
-                <span className="text-white font-bold">4.</span>
-                Click "Add Property" and the listing will be added to your portfolio
+                Click "Add Property" and the listing will be automatically assigned to you and added to your portfolio
               </p>
             </div>
           ) : (
@@ -774,7 +901,7 @@ export default function AddPropertyPage() {
               </p>
               <p className="flex items-start gap-3">
                 <span className="text-white font-bold">4.</span>
-                Assign property managers and click "Add Property" to save
+                Click "Add Property" to save - it will be automatically assigned to you
               </p>
             </div>
           )}

@@ -8,7 +8,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Property {
   id: string
   address: string | null
-  monthly_rent: string | null
   bedrooms: string | null
   bathrooms: string | null
   area: string | null
@@ -19,12 +18,32 @@ export interface Property {
   created_at: string | null
   updated_at: string | null
   position: number | null
+  // Pricing display options
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
+  // Field visibility toggles
+  show_bedrooms?: boolean
+  show_bathrooms?: boolean
+  show_area?: boolean
+  show_address?: boolean
+  show_images?: boolean
+  // Custom labels
+  label_bedrooms?: string
+  label_bathrooms?: string
+  label_area?: string
+  label_monthly_rent?: string
+  label_nightly_rate?: string
+  label_purchase_price?: string
+  // Custom notes
+  custom_notes?: string | null
 }
 
 export async function getProperties() {
   // Fetch all properties with position ordering
-  // nullsFirst: true puts new properties (without position) at the top
-  // Then sort by created_at descending for properties with null position
   const { data, error } = await supabase
     .from('properties')
     .select('*')
@@ -34,9 +53,19 @@ export async function getProperties() {
     return []
   }
 
+  // Deduplicate by zillow_url - keep only the first occurrence of each URL
+  const seenUrls = new Set<string>()
+  const uniqueProperties = (data as Property[]).filter(property => {
+    if (seenUrls.has(property.zillow_url)) {
+      return false // Skip duplicate
+    }
+    seenUrls.add(property.zillow_url)
+    return true
+  })
+
   // Sort: properties with position come first (by position asc),
   // then properties without position (by created_at desc)
-  const sorted = (data as Property[]).sort((a, b) => {
+  const sorted = uniqueProperties.sort((a, b) => {
     // Both have positions - sort by position ascending
     if (a.position !== null && b.position !== null) {
       return a.position - b.position
@@ -84,15 +113,22 @@ export async function getPropertyById(id: string) {
 export async function saveProperty(propertyData: {
   zillow_url: string
   address?: string
-  monthly_rent?: string
   bedrooms?: string
   bathrooms?: string
   area?: string
   images?: string[]
   description?: string
+  // Pricing display options
+  show_monthly_rent?: boolean
+  custom_monthly_rent?: number | null
+  show_nightly_rate?: boolean
+  custom_nightly_rate?: number | null
+  show_purchase_price?: boolean
+  custom_purchase_price?: number | null
 }) {
   console.log('saveProperty called with:', propertyData)
 
+  // Allow duplicate zillow_urls - different managers can add the same property with different pricing
   const { data, error } = await supabase
     .from('properties')
     .insert([propertyData])
@@ -107,7 +143,13 @@ export async function saveProperty(propertyData: {
       hint: error.hint,
       code: error.code
     })
-    throw error
+
+    // Handle duplicate URL constraint error with a user-friendly message
+    if (error.code === '23505' && error.message.includes('zillow_url')) {
+      throw new Error('This property has already been added to the system. Each property can only be added once. If you need to update pricing or details, please edit the existing property instead.')
+    }
+
+    throw new Error(error.message || 'Failed to save property')
   }
 
   console.log('Property saved successfully:', data)

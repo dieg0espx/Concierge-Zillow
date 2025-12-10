@@ -3,24 +3,26 @@ import { notFound } from 'next/navigation'
 import { PropertyAssignment } from '@/components/property-assignment'
 import { ManagerUrlDisplay } from '@/components/manager-url-display'
 import { ProfilePictureUpload } from '@/components/profile-picture-upload'
+import { ClientManagement } from '@/components/client-management'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft, Mail, Phone, ExternalLink, Users, Camera } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, ExternalLink } from 'lucide-react'
 import { formatPhoneNumber } from '@/lib/utils'
 
 export default async function ManagerPropertiesPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Fetch property manager
   const { data: manager, error: managerError } = await supabase
     .from('property_managers')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (managerError || !manager) {
@@ -37,9 +39,16 @@ export default async function ManagerPropertiesPage({
   const { data: assignments, error: assignmentsError } = await supabase
     .from('property_manager_assignments')
     .select('property_id, properties(*)')
-    .eq('manager_id', params.id)
+    .eq('manager_id', id)
 
   const assignedProperties = (assignments?.map((a: any) => a.properties).filter(Boolean) || []) as any[]
+
+  // Fetch clients for this manager
+  const { data: clients, error: clientsError } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('manager_id', id)
+    .order('created_at', { ascending: false })
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -58,7 +67,7 @@ export default async function ManagerPropertiesPage({
               {/* Profile Picture */}
               <div className="flex flex-col items-center gap-4">
                 <ProfilePictureUpload
-                  managerId={params.id}
+                  managerId={id}
                   currentPictureUrl={manager.profile_picture_url}
                   managerName={manager.name}
                 />
@@ -91,6 +100,9 @@ export default async function ManagerPropertiesPage({
         </Card>
       </div>
 
+      {/* Clients Section */}
+      <ClientManagement managerId={id} clients={clients || []} />
+
       {/* Public Portfolio URL Section */}
       <Card className="elevated-card">
         <CardHeader className="pb-6 border-b border-white/10">
@@ -105,8 +117,8 @@ export default async function ManagerPropertiesPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
-          <ManagerUrlDisplay managerId={params.id} />
-          <Link href={`/manager/${params.id}`} target="_blank" className="block">
+          <ManagerUrlDisplay managerId={id} />
+          <Link href={`/manager/${id}`} target="_blank" className="block">
             <Button variant="outline" className="w-full sm:w-auto border-white/30 hover:bg-white/10 hover:border-white text-white">
               <ExternalLink className="h-4 w-4 mr-2" />
               Preview Public Portfolio Page
@@ -121,7 +133,7 @@ export default async function ManagerPropertiesPage({
           Property Management
         </h2>
         <PropertyAssignment
-          managerId={params.id}
+          managerId={id}
           allProperties={allProperties || []}
           assignedProperties={assignedProperties || []}
         />

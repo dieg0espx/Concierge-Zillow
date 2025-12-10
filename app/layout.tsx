@@ -39,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} bg-black`}>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} bg-black`} suppressHydrationWarning>
         {children}
         <Analytics />
       </body>

@@ -577,31 +577,37 @@ export async function declineQuote(quoteNumber: string) {
 
 // Email quote PDF to client
 export async function emailQuotePDF(quoteId: string) {
-  const supabase = await createClient()
+  try {
+    const supabase = await createClient()
 
-  // Get quote with items
-  const { data: quote, error: quoteError } = await supabase
-    .from('quotes')
-    .select('*')
-    .eq('id', quoteId)
-    .single()
+    // Check if SMTP is configured
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      return { error: 'Email service is not configured. Please contact support.' }
+    }
 
-  if (quoteError || !quote) {
-    return { error: 'Quote not found' }
-  }
+    // Get quote with items
+    const { data: quote, error: quoteError } = await supabase
+      .from('quotes')
+      .select('*')
+      .eq('id', quoteId)
+      .single()
 
-  const { data: serviceItems, error: itemsError } = await supabase
-    .from('quote_service_items')
-    .select('*')
-    .eq('quote_id', quoteId)
-    .order('created_at', { ascending: true })
+    if (quoteError || !quote) {
+      return { error: 'Quote not found' }
+    }
 
-  if (itemsError) {
-    return { error: itemsError.message }
-  }
+    const { data: serviceItems, error: itemsError } = await supabase
+      .from('quote_service_items')
+      .select('*')
+      .eq('quote_id', quoteId)
+      .order('created_at', { ascending: true })
 
-  // Send email with quote details
-  const nodemailer = await import('nodemailer')
+    if (itemsError) {
+      return { error: itemsError.message }
+    }
+
+    // Send email with quote details
+    const nodemailer = await import('nodemailer')
 
   const transporter = nodemailer.default.createTransport({
     host: process.env.SMTP_HOST,
@@ -795,7 +801,6 @@ ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
     `,
   }
 
-  try {
     await transporter.sendMail(mailOptions)
 
     // Update quote status to sent if it was draft
@@ -813,7 +818,7 @@ ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
     return { success: true }
   } catch (error) {
     console.error('Failed to send quote email:', error)
-    return { error: 'Failed to send email' }
+    return { error: error instanceof Error ? error.message : 'Failed to send email' }
   }
 }
 

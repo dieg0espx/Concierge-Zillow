@@ -21,9 +21,12 @@ import {
   Car,
   Plane,
   Ship,
+  Calendar,
 } from 'lucide-react'
 import { createQuote, updateQuote, QuoteWithItems } from '@/lib/actions/quotes'
 import { formatCurrency } from '@/lib/utils'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 interface ServiceItem {
   id?: string
@@ -49,8 +52,8 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
   // Form state
   const [clientName, setClientName] = useState(quote?.client_name || '')
   const [clientEmail, setClientEmail] = useState(quote?.client_email || '')
-  const [expirationDate, setExpirationDate] = useState(
-    quote?.expiration_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const [expirationDate, setExpirationDate] = useState<Date | null>(
+    quote?.expiration_date ? new Date(quote.expiration_date) : null
   )
   const [notes, setNotes] = useState(quote?.notes || '')
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>(
@@ -67,7 +70,7 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
   const total = serviceItems.reduce((sum, item) => sum + (item.price || 0), 0)
 
   const addServiceItem = () => {
-    setServiceItems([...serviceItems, { service_name: '', description: '', price: 0, images: [] }])
+    setServiceItems([{ service_name: '', description: '', price: 0, images: [] }, ...serviceItems])
   }
 
   const removeServiceItem = (index: number) => {
@@ -106,30 +109,26 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
           throw new Error(`File too large: ${file.name}. Max size is 10MB.`)
         }
 
-        // Create unique file name
-        const fileExt = file.name.split('.').pop()
-        const fileName = `quote-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        // Upload to Cloudinary
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', 'concierge') // We'll create this preset
+        formData.append('folder', 'concierge')
 
-        // Upload to Supabase storage
-        const { data, error } = await supabase.storage
-          .from('quote-images')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false,
-          })
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/dku1gnuat/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        )
 
-        if (error) {
-          // If bucket doesn't exist, try to create it or use a different approach
-          console.error('Upload error:', error)
-          throw new Error(`Failed to upload ${file.name}: ${error.message}`)
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`)
         }
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('quote-images')
-          .getPublicUrl(fileName)
-
-        return urlData.publicUrl
+        const data = await response.json()
+        return data.secure_url
       })
 
       const uploadedUrls = await Promise.all(uploadPromises)
@@ -162,18 +161,10 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
     }
   }
 
-  const removeImage = async (itemIndex: number, imageIndex: number) => {
-    const imageUrl = serviceItems[itemIndex].images[imageIndex]
-
-    // Try to delete from storage
-    try {
-      const fileName = imageUrl.split('/').pop()
-      if (fileName) {
-        await supabase.storage.from('quote-images').remove([fileName])
-      }
-    } catch (error) {
-      console.error('Failed to delete image from storage:', error)
-    }
+  const removeImage = (itemIndex: number, imageIndex: number) => {
+    // Note: For Cloudinary, we're just removing from the UI
+    // Images will still exist in Cloudinary unless manually deleted from the dashboard
+    // You can implement Cloudinary deletion API if needed
 
     // Remove from state
     const updated = [...serviceItems]
@@ -212,7 +203,7 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
       const quoteData = {
         client_name: clientName.trim(),
         client_email: clientEmail.trim(),
-        expiration_date: expirationDate,
+        expiration_date: expirationDate ? expirationDate.toISOString().split('T')[0] : '',
         notes: notes.trim() || null,
         service_items: validItems.map(item => ({
           service_name: item.service_name.trim(),
@@ -297,14 +288,30 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="expirationDate" className="text-white/90">Expiration Date *</Label>
-            <Input
-              id="expirationDate"
-              type="date"
-              value={expirationDate}
-              onChange={(e) => setExpirationDate(e.target.value)}
-              className="bg-white/5 border-white/20 text-white w-full sm:w-48"
-            />
+            <Label htmlFor="expirationDate" className="text-white/90 uppercase tracking-wide text-sm font-semibold">Expiration Date *</Label>
+            <div className="relative w-full sm:w-64">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70 pointer-events-none z-10" />
+              <DatePicker
+                selected={expirationDate}
+                onChange={(date: Date | null) => setExpirationDate(date)}
+                dateFormat="MM/dd/yyyy"
+                placeholderText="Select expiration date"
+                className="w-full pl-10 bg-white/5 border border-white/20 text-white placeholder:text-white/40 h-12 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-white/30"
+                calendarClassName="luxury-calendar"
+                wrapperClassName="w-full"
+                popperClassName="date-picker-popper"
+                popperModifiers={[
+                  {
+                    name: 'zIndex',
+                    enabled: true,
+                    phase: 'write',
+                    fn: ({ state }) => {
+                      state.styles.popper.zIndex = 99999;
+                    },
+                  },
+                ]}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -335,10 +342,26 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setServiceItems([
-                    ...serviceItems,
-                    { service_name: suggestion.name, description: suggestion.desc, price: 0, images: [] },
-                  ])
+                  // Find the first empty card (no service name)
+                  const emptyIndex = serviceItems.findIndex(item => !item.service_name.trim())
+
+                  if (emptyIndex !== -1) {
+                    // Fill the first empty card
+                    const updated = [...serviceItems]
+                    updated[emptyIndex] = {
+                      service_name: suggestion.name,
+                      description: suggestion.desc,
+                      price: 0,
+                      images: updated[emptyIndex].images || []
+                    }
+                    setServiceItems(updated)
+                  } else {
+                    // If no empty card, add at the top
+                    setServiceItems([
+                      { service_name: suggestion.name, description: suggestion.desc, price: 0, images: [] },
+                      ...serviceItems
+                    ])
+                  }
                 }}
                 className="text-white/70 hover:text-white hover:bg-white/10 text-xs"
               >

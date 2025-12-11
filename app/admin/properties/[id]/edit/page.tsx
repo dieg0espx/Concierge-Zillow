@@ -628,7 +628,33 @@ export default function EditPropertyPage() {
           area: formData.area,
         }}
         isOpen={isCustomizationOpen}
-        onClose={() => setIsCustomizationOpen(false)}
+        onClose={async () => {
+          setIsCustomizationOpen(false)
+          // Reload customization settings from database
+          const supabase = createClient()
+          const { data: property } = await supabase
+            .from('properties')
+            .select('*')
+            .eq('id', propertyId)
+            .single()
+
+          if (property) {
+            setCustomizationSettings({
+              show_bedrooms: property.show_bedrooms ?? true,
+              show_bathrooms: property.show_bathrooms ?? true,
+              show_area: property.show_area ?? true,
+              show_address: property.show_address ?? true,
+              show_images: property.show_images ?? true,
+              label_bedrooms: property.label_bedrooms || 'Bedrooms',
+              label_bathrooms: property.label_bathrooms || 'Bathrooms',
+              label_area: property.label_area || 'Square Feet',
+              label_monthly_rent: property.label_monthly_rent || 'Monthly Rent',
+              label_nightly_rate: property.label_nightly_rate || 'Nightly Rate',
+              label_purchase_price: property.label_purchase_price || 'Purchase Price',
+              custom_notes: property.custom_notes || null,
+            })
+          }
+        }}
       />
     </div>
   )

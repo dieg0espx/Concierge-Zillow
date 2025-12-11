@@ -244,6 +244,18 @@ export async function createQuote(data: {
     return { error: itemsError.message }
   }
 
+  // Send email if status is 'sent'
+  if (data.status === 'sent') {
+    sendQuoteEmail({
+      clientName: data.client_name,
+      clientEmail: data.client_email,
+      quoteNumber: quoteNumber,
+      expirationDate: data.expiration_date,
+      total,
+      managerName: managerProfile.name,
+    }).catch(err => console.error('Failed to send quote email:', err))
+  }
+
   revalidatePath('/admin/quotes')
   return { data: quote }
 }
@@ -904,4 +916,136 @@ export async function convertQuoteToInvoice(quoteId: string) {
   revalidatePath('/admin/quotes')
   revalidatePath('/admin/invoices')
   return { data: invoice }
+}
+
+// Send quote email to client
+async function sendQuoteEmail(data: {
+  clientName: string
+  clientEmail: string
+  quoteNumber: string
+  expirationDate: string
+  total: number
+  managerName: string
+}) {
+  const nodemailer = await import('nodemailer')
+
+  const transporter = nodemailer.default.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
+  const quoteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/quote/${data.quoteNumber}`
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM,
+    to: data.clientEmail,
+    subject: `New Quote ${data.quoteNumber} from ${data.managerName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 28px; font-weight: bold; letter-spacing: 3px; margin-bottom: 5px; }
+            .tagline { font-size: 12px; letter-spacing: 4px; color: #c9a227; text-transform: uppercase; }
+            .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
+            .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
+            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; font-weight: bold; font-size: 18px; padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; }
+            .button { display: inline-block; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+            .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
+            .footer-text { font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">CADIZ & LLUIS</div>
+              <div class="tagline">Luxury Living</div>
+            </div>
+            <div class="content">
+              <p>Dear ${data.clientName},</p>
+              <p>You have received a new quote from <strong>${data.managerName}</strong>.</p>
+
+              <div class="detail-box">
+                <div class="detail-row">
+                  <span>Quote Number</span>
+                  <span>${data.quoteNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span>Valid Until</span>
+                  <span>${formatDate(data.expirationDate)}</span>
+                </div>
+                <div class="detail-row">
+                  <span>Total Amount</span>
+                  <span>${formatCurrency(data.total)}</span>
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${quoteUrl}" class="button">View Quote</a>
+              </div>
+
+              <p style="font-size: 14px; color: #666; margin-top: 30px;">
+                Click the button above to review your quote and accept or decline.
+              </p>
+
+              <p style="margin-top: 30px;">Best regards,<br><strong>${data.managerName}</strong></p>
+            </div>
+            <div class="footer">
+              <p class="footer-text">
+                <strong>Cadiz & Lluis - Luxury Living</strong><br>
+                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+New Quote ${data.quoteNumber}
+
+Dear ${data.clientName},
+
+You have received a new quote from ${data.managerName}.
+
+Quote Number: ${data.quoteNumber}
+Valid Until: ${formatDate(data.expirationDate)}
+Total Amount: ${formatCurrency(data.total)}
+
+To review and respond to your quote, please visit:
+${quoteUrl}
+
+Best regards,
+${data.managerName}
+
+Cadiz & Lluis - Luxury Living
+${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+    `,
+  }
+
+  await transporter.sendMail(mailOptions)
 }

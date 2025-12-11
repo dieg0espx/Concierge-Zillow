@@ -27,6 +27,8 @@ import {
 import Link from 'next/link'
 import { createInvoice, updateInvoice, InvoiceWithLineItems } from '@/lib/actions/invoices'
 import { formatCurrency } from '@/lib/utils'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 type LineItem = {
   id?: string
@@ -46,8 +48,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
 
   const [clientName, setClientName] = useState(invoice?.client_name || '')
   const [clientEmail, setClientEmail] = useState(invoice?.client_email || '')
-  const [dueDate, setDueDate] = useState(
-    invoice?.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : ''
+  const [dueDate, setDueDate] = useState<Date | null>(
+    invoice?.due_date ? new Date(invoice.due_date) : null
   )
   const [taxRate, setTaxRate] = useState(invoice?.tax_rate?.toString() || '0')
   const [notes, setNotes] = useState(invoice?.notes || '')
@@ -119,7 +121,7 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
     const data = {
       client_name: clientName.trim(),
       client_email: clientEmail.trim(),
-      due_date: dueDate,
+      due_date: dueDate ? dueDate.toISOString().split('T')[0] : '',
       tax_rate: parseFloat(taxRate) || 0,
       notes: notes.trim() || null,
       line_items: lineItems.filter(item => item.description.trim()).map(item => ({
@@ -260,13 +262,26 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                   Due Date *
                 </Label>
                 <div className="relative w-full md:w-1/2">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="pl-10 bg-white/5 border-white/20 text-white h-12"
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/70 pointer-events-none z-10" />
+                  <DatePicker
+                    selected={dueDate}
+                    onChange={(date: Date | null) => setDueDate(date)}
+                    dateFormat="MM/dd/yyyy"
+                    placeholderText="Select due date"
+                    className="w-full pl-10 bg-white/5 border border-white/20 text-white placeholder:text-white/40 h-12 rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    calendarClassName="luxury-calendar"
+                    wrapperClassName="w-full"
+                    popperClassName="date-picker-popper"
+                    popperModifiers={[
+                      {
+                        name: 'zIndex',
+                        enabled: true,
+                        phase: 'write',
+                        fn: ({ state }) => {
+                          state.styles.popper.zIndex = 99999;
+                        },
+                      },
+                    ]}
                   />
                 </div>
               </div>

@@ -255,6 +255,18 @@ export async function createInvoice(data: {
     return { error: lineItemsError.message }
   }
 
+  // Send email if status is 'sent'
+  if (data.status === 'sent') {
+    sendInvoiceEmail({
+      clientName: data.client_name,
+      clientEmail: data.client_email,
+      invoiceNumber: invoiceNumber,
+      dueDate: data.due_date,
+      total,
+      managerName: managerProfile.name,
+    }).catch(err => console.error('Failed to send invoice email:', err))
+  }
+
   revalidatePath('/admin/invoices')
   return { data: invoice }
 }
@@ -393,6 +405,22 @@ export async function deleteInvoice(invoiceId: string) {
 export async function sendInvoice(invoiceId: string) {
   const supabase = await createClient()
 
+  // Get invoice details and manager profile
+  const { data: invoice, error: invoiceError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single()
+
+  if (invoiceError || !invoice) {
+    return { error: 'Invoice not found' }
+  }
+
+  const { data: managerProfile } = await getCurrentManagerProfile()
+  if (!managerProfile) {
+    return { error: 'Manager profile not found' }
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({
@@ -406,6 +434,16 @@ export async function sendInvoice(invoiceId: string) {
   if (error) {
     return { error: error.message }
   }
+
+  // Send email
+  sendInvoiceEmail({
+    clientName: invoice.client_name,
+    clientEmail: invoice.client_email,
+    invoiceNumber: invoice.invoice_number,
+    dueDate: invoice.due_date,
+    total: invoice.total,
+    managerName: managerProfile.name,
+  }).catch(err => console.error('Failed to send invoice email:', err))
 
   revalidatePath('/admin/invoices')
   return { success: true }
@@ -625,6 +663,138 @@ If you have any questions about this payment, please don't hesitate to contact u
 
 Best regards,
 The Cadiz & Lluis Team
+
+Cadiz & Lluis - Luxury Living
+${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+    `,
+  }
+
+  await transporter.sendMail(mailOptions)
+}
+
+// Send invoice email to client
+async function sendInvoiceEmail(data: {
+  clientName: string
+  clientEmail: string
+  invoiceNumber: string
+  dueDate: string
+  total: number
+  managerName: string
+}) {
+  const nodemailer = await import('nodemailer')
+
+  const transporter = nodemailer.default.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
+  const paymentUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/invoice/${data.invoiceNumber}/pay`
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM,
+    to: data.clientEmail,
+    subject: `New Invoice ${data.invoiceNumber} from ${data.managerName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 28px; font-weight: bold; letter-spacing: 3px; margin-bottom: 5px; }
+            .tagline { font-size: 12px; letter-spacing: 4px; color: #c9a227; text-transform: uppercase; }
+            .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
+            .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
+            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row:last-child { border-bottom: none; font-weight: bold; font-size: 18px; padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; }
+            .button { display: inline-block; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+            .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
+            .footer-text { font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">CADIZ & LLUIS</div>
+              <div class="tagline">Luxury Living</div>
+            </div>
+            <div class="content">
+              <p>Dear ${data.clientName},</p>
+              <p>You have received a new invoice from <strong>${data.managerName}</strong>.</p>
+
+              <div class="detail-box">
+                <div class="detail-row">
+                  <span>Invoice Number</span>
+                  <span>${data.invoiceNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span>Due Date</span>
+                  <span>${formatDate(data.dueDate)}</span>
+                </div>
+                <div class="detail-row">
+                  <span>Total Amount</span>
+                  <span>${formatCurrency(data.total)}</span>
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${paymentUrl}" class="button">View & Pay Invoice</a>
+              </div>
+
+              <p style="font-size: 14px; color: #666; margin-top: 30px;">
+                Click the button above to view your invoice details and make a payment online.
+              </p>
+
+              <p style="margin-top: 30px;">Best regards,<br><strong>${data.managerName}</strong></p>
+            </div>
+            <div class="footer">
+              <p class="footer-text">
+                <strong>Cadiz & Lluis - Luxury Living</strong><br>
+                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+New Invoice ${data.invoiceNumber}
+
+Dear ${data.clientName},
+
+You have received a new invoice from ${data.managerName}.
+
+Invoice Number: ${data.invoiceNumber}
+Due Date: ${formatDate(data.dueDate)}
+Total Amount: ${formatCurrency(data.total)}
+
+To view and pay your invoice, please visit:
+${paymentUrl}
+
+Best regards,
+${data.managerName}
 
 Cadiz & Lluis - Luxury Living
 ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}

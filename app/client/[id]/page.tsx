@@ -73,7 +73,7 @@ export default async function ClientPublicPage({
   return (
     <div className="min-h-screen marble-bg">
       {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-md bg-black/20 sticky top-0 z-50 shadow-2xl">
+      <header className="border-b border-white/10 backdrop-blur-md bg-black/20 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-7 animate-fade-in">
           <div className="flex flex-col gap-8">
             {/* Logo and Brand */}

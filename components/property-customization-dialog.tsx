@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,6 +55,22 @@ export function PropertyCustomizationDialog({
 
   // Custom notes
   const [customNotes, setCustomNotes] = useState(currentSettings.custom_notes || '')
+
+  // Sync state when currentSettings change (dialog opens)
+  useEffect(() => {
+    setShowBedrooms(currentSettings.show_bedrooms ?? true)
+    setShowBathrooms(currentSettings.show_bathrooms ?? true)
+    setShowArea(currentSettings.show_area ?? true)
+    setShowAddress(currentSettings.show_address ?? true)
+    setShowImages(currentSettings.show_images ?? true)
+    setLabelBedrooms(currentSettings.label_bedrooms || 'Bedrooms')
+    setLabelBathrooms(currentSettings.label_bathrooms || 'Bathrooms')
+    setLabelArea(currentSettings.label_area || 'Square Feet')
+    setLabelMonthlyRent(currentSettings.label_monthly_rent || 'Monthly Rent')
+    setLabelNightlyRate(currentSettings.label_nightly_rate || 'Nightly Rate')
+    setLabelPurchasePrice(currentSettings.label_purchase_price || 'Purchase Price')
+    setCustomNotes(currentSettings.custom_notes || '')
+  }, [currentSettings, isOpen])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -132,7 +148,7 @@ export function PropertyCustomizationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-card-accent border-white/20 text-white w-[95vw] max-w-5xl max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="glass-card-accent border-white/20 text-white w-[95vw] !max-w-5xl max-h-[90vh] p-0 flex flex-col">
         <DialogHeader className="space-y-4 pb-4 border-b border-white/10 px-6 pt-6">
           <DialogTitle className="luxury-heading text-3xl sm:text-4xl tracking-[0.15em] text-white">
             Customize Display
@@ -142,7 +158,7 @@ export function PropertyCustomizationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="settings" className="w-full">
+        <Tabs defaultValue="settings" className="w-full flex flex-col flex-1 min-h-0">
           <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 mx-6 mt-4" style={{ width: 'calc(100% - 3rem)' }}>
             <TabsTrigger value="settings" className="data-[state=active]:bg-white/20 text-white">
               Settings
@@ -152,7 +168,7 @@ export function PropertyCustomizationDialog({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="settings" className="mt-0">
+          <TabsContent value="settings" className="mt-0 overflow-y-auto flex-1">
         <div className="space-y-8 py-6 px-6">
           {/* Field Visibility Section */}
           <div className="space-y-4">
@@ -364,7 +380,7 @@ export function PropertyCustomizationDialog({
         </div>
           </TabsContent>
 
-          <TabsContent value="preview" className="mt-0">
+          <TabsContent value="preview" className="mt-0 overflow-y-auto flex-1">
             <div className="py-6 px-6 space-y-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-1 w-12 divider-accent"></div>
@@ -513,7 +529,7 @@ export function PropertyCustomizationDialog({
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 pb-6 px-6 border-t border-white/10">
+        <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 pb-6 px-6 border-t border-white/10 flex-shrink-0">
           <Button
             variant="outline"
             onClick={handleReset}

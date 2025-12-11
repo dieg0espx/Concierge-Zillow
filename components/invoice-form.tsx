@@ -272,6 +272,8 @@ export function InvoiceForm({ invoice }: InvoiceFormProps) {
                     calendarClassName="luxury-calendar"
                     wrapperClassName="w-full"
                     popperClassName="date-picker-popper"
+                    withPortal
+                    portalId="root-portal"
                     popperModifiers={[
                       {
                         name: 'zIndex',

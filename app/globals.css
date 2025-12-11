@@ -830,6 +830,13 @@
 
   .react-datepicker__portal {
     z-index: 99999 !important;
+    position: fixed !important;
+  }
+
+  .react-datepicker__portal .react-datepicker__day-name,
+  .react-datepicker__portal .react-datepicker__day,
+  .react-datepicker__portal .react-datepicker__time-name {
+    color: rgba(255, 255, 255, 0.8) !important;
   }
 
   .react-datepicker {

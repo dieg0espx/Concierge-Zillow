@@ -300,6 +300,8 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
                 calendarClassName="luxury-calendar"
                 wrapperClassName="w-full"
                 popperClassName="date-picker-popper"
+                withPortal
+                portalId="root-portal"
                 popperModifiers={[
                   {
                     name: 'zIndex',

@@ -973,9 +973,9 @@ async function sendQuoteEmail(data: {
             .tagline { font-size: 12px; letter-spacing: 4px; color: #c9a227; text-transform: uppercase; }
             .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
             .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
-            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; gap: 20px; }
             .detail-row:last-child { border-bottom: none; font-weight: bold; font-size: 18px; padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; }
-            .button { display: inline-block; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+            .button { display: inline-block; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
             .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
             .footer-text { font-size: 12px; color: #666; }
           </style>

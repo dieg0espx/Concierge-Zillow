@@ -119,15 +119,23 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
     setSelectedInvoice(null)
   }
 
-  const handleDownloadPDF = (invoice: Invoice) => {
+  const handleDownloadPDF = async (invoice: Invoice) => {
     try {
-      const pdf = generateInvoicePDF(invoice)
+      // Fetch full invoice data with line items
+      const response = await fetch(`/api/invoice-data/${invoice.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoice data')
+      }
+      const fullInvoice = await response.json()
+
+      const pdf = generateInvoicePDF(fullInvoice)
       pdf.save(`${invoice.invoice_number}.pdf`)
       toast({
         title: 'PDF Downloaded',
         description: `Invoice ${invoice.invoice_number} has been downloaded.`,
       })
     } catch (error) {
+      console.error('PDF generation error:', error)
       toast({
         title: 'Error',
         description: 'Failed to generate PDF. Please try again.',

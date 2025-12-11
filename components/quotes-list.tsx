@@ -129,15 +129,23 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
     setSelectedQuote(null)
   }
 
-  const handleDownloadPDF = (quote: Quote) => {
+  const handleDownloadPDF = async (quote: Quote) => {
     try {
-      const pdf = generateQuotePDF(quote)
+      // Fetch full quote data with service items
+      const response = await fetch(`/api/quote-data/${quote.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch quote data')
+      }
+      const fullQuote = await response.json()
+
+      const pdf = generateQuotePDF(fullQuote)
       pdf.save(`${quote.quote_number}.pdf`)
       toast({
         title: 'PDF Downloaded',
         description: `Quote ${quote.quote_number} has been downloaded.`,
       })
     } catch (error) {
+      console.error('PDF generation error:', error)
       toast({
         title: 'Error',
         description: 'Failed to generate PDF. Please try again.',

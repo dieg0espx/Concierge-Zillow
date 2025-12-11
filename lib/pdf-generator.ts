@@ -43,7 +43,7 @@ export function generateInvoicePDF(invoice: any) {
   doc.setTextColor(colors.text)
 
   doc.text(`Invoice Number: ${invoice.invoice_number}`, 20, 75)
-  doc.text(`Issue Date: ${new Date(invoice.issue_date).toLocaleDateString()}`, 20, 82)
+  doc.text(`Issue Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, 82)
   doc.text(`Due Date: ${new Date(invoice.due_date).toLocaleDateString()}`, 20, 89)
 
   // Bill To Section
@@ -195,7 +195,7 @@ export function generateQuotePDF(quote: any) {
   doc.setTextColor(colors.text)
 
   doc.text(`Quote Number: ${quote.quote_number}`, 20, 75)
-  doc.text(`Issue Date: ${new Date(quote.issue_date).toLocaleDateString()}`, 20, 82)
+  doc.text(`Issue Date: ${new Date(quote.created_at).toLocaleDateString()}`, 20, 82)
   doc.text(`Valid Until: ${new Date(quote.expiration_date).toLocaleDateString()}`, 20, 89)
 
   // Quote For Section

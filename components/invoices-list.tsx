@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import { Invoice, InvoiceStatus, deleteInvoice, sendInvoice } from '@/lib/actions/invoices'
 import { formatCurrency } from '@/lib/utils'
+import { generateInvoicePDF } from '@/lib/pdf-generator'
 
 const statusConfig: Record<InvoiceStatus, { label: string; color: string; icon: any }> = {
   draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: FileText },
@@ -116,6 +117,23 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
     setIsSending(false)
     setSendDialogOpen(false)
     setSelectedInvoice(null)
+  }
+
+  const handleDownloadPDF = (invoice: Invoice) => {
+    try {
+      const pdf = generateInvoicePDF(invoice)
+      pdf.save(`${invoice.invoice_number}.pdf`)
+      toast({
+        title: 'PDF Downloaded',
+        description: `Invoice ${invoice.invoice_number} has been downloaded.`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -276,19 +294,15 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
                             )}
                             {invoice.status !== 'draft' && (
                               <>
-                                <a
-                                  href={`/api/invoice/${invoice.invoice_number}/pdf`}
-                                  download={`${invoice.invoice_number}.pdf`}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadPDF(invoice)}
+                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                  title="Download PDF"
                                 >
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                                    title="Download PDF"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </a>
+                                  <Download className="h-4 w-4" />
+                                </Button>
                                 <Link href={`/invoice/${invoice.invoice_number}`} target="_blank">
                                   <Button
                                     variant="ghost"
@@ -396,20 +410,15 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
                         </>
                       ) : (
                         <>
-                          <a
-                            href={`/api/invoice/${invoice.invoice_number}/pdf`}
-                            download={`${invoice.invoice_number}.pdf`}
-                            className="flex-1"
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadPDF(invoice)}
+                            className="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
                           >
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full border-green-500/30 text-green-400 hover:bg-green-500/10"
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              PDF
-                            </Button>
-                          </a>
+                            <Download className="h-4 w-4 mr-2" />
+                            PDF
+                          </Button>
                           <Link href={`/invoice/${invoice.invoice_number}`} target="_blank" className="flex-1">
                             <Button
                               variant="outline"

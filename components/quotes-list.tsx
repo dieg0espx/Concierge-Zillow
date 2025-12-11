@@ -47,6 +47,7 @@ import {
 } from 'lucide-react'
 import { Quote, QuoteStatus, deleteQuote, sendQuote, duplicateQuote, emailQuotePDF, convertQuoteToInvoice } from '@/lib/actions/quotes'
 import { formatCurrency } from '@/lib/utils'
+import { generateQuotePDF } from '@/lib/pdf-generator'
 
 const statusConfig: Record<QuoteStatus, { label: string; color: string; icon: any }> = {
   draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: FileText },
@@ -126,6 +127,23 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
     setIsSending(false)
     setSendDialogOpen(false)
     setSelectedQuote(null)
+  }
+
+  const handleDownloadPDF = (quote: Quote) => {
+    try {
+      const pdf = generateQuotePDF(quote)
+      pdf.save(`${quote.quote_number}.pdf`)
+      toast({
+        title: 'PDF Downloaded',
+        description: `Quote ${quote.quote_number} has been downloaded.`,
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleDuplicate = async (quote: Quote) => {
@@ -385,19 +403,15 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
                                   </Button>
                                 </Link>
                               )}
-                              <a
-                                href={`/api/quote/${quote.quote_number}/pdf`}
-                                download={`${quote.quote_number}.pdf`}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownloadPDF(quote)}
+                                className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                title="Download PDF"
                               >
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                                  title="Download PDF"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </a>
+                                <Download className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -569,20 +583,15 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
                             </Button>
                           </Link>
                         )}
-                        <a
-                          href={`/api/quote/${quote.quote_number}/pdf`}
-                          download={`${quote.quote_number}.pdf`}
-                          className="flex-1"
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadPDF(quote)}
+                          className="flex-1 text-green-400 border-green-400/30 hover:bg-green-500/10"
                         >
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-green-400 border-green-400/30 hover:bg-green-500/10"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            PDF
-                          </Button>
-                        </a>
+                          <Download className="h-4 w-4 mr-2" />
+                          PDF
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

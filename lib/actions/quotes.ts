@@ -790,7 +790,6 @@ Total: ${formatCurrency(quote.total)}
 ${quote.notes ? `Notes: ${quote.notes}` : ''}
 
 View your quote online: ${quoteUrl}
-Download PDF: ${pdfUrl}
 
 This quote is valid until ${formatDate(quote.expiration_date)}.
 

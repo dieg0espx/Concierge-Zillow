@@ -253,8 +253,8 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
         })}
       </div>
 
-      {/* Quotes Table */}
-      <Card className="glass-card-accent border-white/10 overflow-hidden">
+      {/* Quotes Table - Desktop */}
+      <Card className="glass-card-accent border-white/10 overflow-hidden hidden md:block">
         <CardContent className="p-0">
           {filteredQuotes.length === 0 ? (
             <div className="p-12 text-center">
@@ -442,6 +442,185 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Quotes Cards - Mobile */}
+      {filteredQuotes.length === 0 ? (
+        <Card className="glass-card-accent border-white/10 md:hidden">
+          <CardContent className="p-12 text-center">
+            <Plane className="h-12 w-12 text-white/30 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">No quotes found</h3>
+            <p className="text-white/60 mb-4">
+              {searchTerm ? 'Try a different search term' : 'Create your first quote for luxury services'}
+            </p>
+            {!searchTerm && (
+              <Link href="/admin/quotes/new">
+                <Button className="btn-luxury">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Quote
+                </Button>
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="md:hidden space-y-4">
+          {filteredQuotes.map((quote) => {
+            const config = statusConfig[quote.status]
+            const Icon = config.icon
+            const isExpired = quote.status === 'expired' ||
+              ((quote.status === 'sent' || quote.status === 'viewed') && new Date(quote.expiration_date) < new Date())
+
+            return (
+              <Card key={quote.id} className="glass-card-accent border-white/10">
+                <CardContent className="p-4 space-y-4">
+                  {/* Header Row with Quote # and Status */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-mono text-sm text-white/70 mb-1">Quote #</p>
+                      <p className="font-bold text-white">{quote.quote_number}</p>
+                    </div>
+                    <Badge className={`${config.color} border`}>
+                      <Icon className="h-3 w-3 mr-1" />
+                      {config.label}
+                    </Badge>
+                  </div>
+
+                  {/* Client Info */}
+                  <div>
+                    <p className="text-sm text-white/70 mb-1">Client</p>
+                    <p className="font-medium text-white">{quote.client_name}</p>
+                    <p className="text-sm text-white/60">{quote.client_email}</p>
+                  </div>
+
+                  {/* Amount and Expiration Date */}
+                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                    <div>
+                      <p className="text-xs text-white/70 mb-1">Amount</p>
+                      <p className="text-xl font-bold text-white">{formatCurrency(quote.total)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-white/70 mb-1">Expires</p>
+                      <div className={`flex items-center gap-1 text-sm ${isExpired ? 'text-red-400' : 'text-white/70'}`}>
+                        <Clock className="h-3 w-3" />
+                        {formatDate(quote.expiration_date)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions - Full width buttons with labels */}
+                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-white/10">
+                    {quote.status === 'draft' ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedQuote(quote)
+                            setSendDialogOpen(true)
+                          }}
+                          className="flex-1 text-blue-400 border-blue-400/30 hover:bg-blue-500/10"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send
+                        </Button>
+                        <Link href={`/admin/quotes/${quote.id}/edit`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedQuote(quote)
+                            setDeleteDialogOpen(true)
+                          }}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {quote.status === 'accepted' && !quote.converted_to_invoice_id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedQuote(quote)
+                              setConvertDialogOpen(true)
+                            }}
+                            className="flex-1 text-emerald-400 border-emerald-400/30 hover:bg-emerald-500/10"
+                          >
+                            <Receipt className="h-4 w-4 mr-2" />
+                            Convert
+                          </Button>
+                        )}
+                        {quote.converted_to_invoice_id && (
+                          <Link href={`/admin/invoices/${quote.converted_to_invoice_id}/edit`} className="flex-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-emerald-400 border-emerald-400/30 hover:bg-emerald-500/10"
+                            >
+                              <Receipt className="h-4 w-4 mr-2" />
+                              View Invoice
+                            </Button>
+                          </Link>
+                        )}
+                        <a
+                          href={`/api/quote/${quote.quote_number}/pdf`}
+                          download={`${quote.quote_number}.pdf`}
+                          className="flex-1"
+                        >
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-green-400 border-green-400/30 hover:bg-green-500/10"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            PDF
+                          </Button>
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedQuote(quote)
+                            setEmailDialogOpen(true)
+                          }}
+                          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDuplicate(quote)}
+                          disabled={isDuplicating}
+                          className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Link href={`/quote/${quote.quote_number}`} target="_blank">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white/70 hover:text-white hover:bg-white/10"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

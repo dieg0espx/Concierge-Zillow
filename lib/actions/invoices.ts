@@ -633,10 +633,12 @@ async function sendPaymentConfirmationEmail(data: {
             .content { background: #ffffff; padding: 45px 40px; }
             .greeting { font-size: 16px; color: #2d3748; margin-bottom: 24px; }
             .detail-box { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 28px; border-radius: 12px; margin: 30px 0; border: 1px solid #e2e8f0; }
-            .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; font-size: 15px; color: #2d3748; gap: 20px; }
-            .detail-row .label { font-weight: 600; color: #718096; flex-shrink: 0; }
-            .detail-row .value { font-weight: 600; color: #2d3748; text-align: right; flex-shrink: 0; }
-            .detail-row.total { padding-top: 18px; margin-top: 12px; border-top: 3px solid #d4af37; font-size: 19px; }
+            .detail-row { padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-row .label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #718096; margin-bottom: 6px; }
+            .detail-row .value { font-size: 16px; font-weight: 600; color: #2d3748; }
+            .detail-row.total { padding-top: 18px; margin-top: 12px; border-top: 3px solid #d4af37; border-bottom: none; }
+            .detail-row.total .label { color: #718096; }
             .detail-row.total .value { font-weight: 800; font-size: 22px; color: #10b981; }
             .cta-container { text-align: center; margin: 35px 0; }
             .cta-button { display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%); color: #1a202c !important; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-weight: 700; letter-spacing: 1.5px; font-size: 14px; text-transform: uppercase; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3); }
@@ -649,8 +651,6 @@ async function sendPaymentConfirmationEmail(data: {
               .content, .footer { padding: 30px 20px !important; }
               .header { padding: 40px 20px !important; }
               .logo { font-size: 24px !important; }
-              .detail-row { flex-direction: column; gap: 4px; }
-              .detail-row .value { text-align: left; }
             }
           </style>
         </head>
@@ -667,16 +667,16 @@ async function sendPaymentConfirmationEmail(data: {
 
               <div class="detail-box">
                 <div class="detail-row">
-                  <span class="label">Invoice Number</span>
-                  <span class="value">${data.invoiceNumber}</span>
+                  <div class="label">Invoice Number</div>
+                  <div class="value">${data.invoiceNumber}</div>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Payment Date</span>
-                  <span class="value">${formatDate(data.paidAt)}</span>
+                  <div class="label">Payment Date</div>
+                  <div class="value">${formatDate(data.paidAt)}</div>
                 </div>
                 <div class="detail-row total">
-                  <span class="label">Amount Paid</span>
-                  <span class="value">${formatCurrency(data.total)}</span>
+                  <div class="label">Amount Paid</div>
+                  <div class="value">${formatCurrency(data.total)}</div>
                 </div>
               </div>
 
@@ -803,8 +803,6 @@ async function sendInvoiceEmail(data: {
               .content, .footer { padding: 30px 20px !important; }
               .header { padding: 40px 20px !important; }
               .logo { font-size: 24px !important; }
-              .detail-row { flex-direction: column; gap: 4px; }
-              .detail-row .value { text-align: left; }
             }
           </style>
         </head>
@@ -821,16 +819,16 @@ async function sendInvoiceEmail(data: {
 
               <div class="detail-box">
                 <div class="detail-row">
-                  <span class="label">Invoice Number</span>
-                  <span class="value">${data.invoiceNumber}</span>
+                  <div class="label">Invoice Number</div>
+                  <div class="value">${data.invoiceNumber}</div>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Due Date</span>
-                  <span class="value">${formatDate(data.dueDate)}</span>
+                  <div class="label">Due Date</div>
+                  <div class="value">${formatDate(data.dueDate)}</div>
                 </div>
                 <div class="detail-row total">
-                  <span class="label">Total Amount</span>
-                  <span class="value">${formatCurrency(data.total)}</span>
+                  <div class="label">Total Amount</div>
+                  <div class="value">${formatCurrency(data.total)}</div>
                 </div>
               </div>
 

@@ -5,10 +5,11 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { number: string } }
+  { params }: { params: Promise<{ number: string }> }
 ) {
   try {
-    const invoiceNumber = params.number
+    const { number } = await params
+    const invoiceNumber = number
     const supabase = await createClient()
 
     // Get invoice

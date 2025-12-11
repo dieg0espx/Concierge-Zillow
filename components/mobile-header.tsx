@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { User } from '@supabase/supabase-js'
-import { LogOut, Menu, X, Home, Users, UserCog, Building2 } from 'lucide-react'
+import { LogOut, Menu, X, Home, Building2, UserCheck, User as UserIcon, FileText, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -23,22 +23,34 @@ export function MobileHeader({ user }: { user: User }) {
 
   const navItems = [
     {
+      label: 'Profile',
+      href: '/admin/profile',
+      icon: UserIcon,
+      active: pathname === '/admin/profile'
+    },
+    {
+      label: 'Clients',
+      href: '/admin/clients',
+      icon: UserCheck,
+      active: pathname === '/admin/clients' || pathname.startsWith('/admin/client/')
+    },
+    {
       label: 'Properties',
       href: '/admin/properties',
       icon: Home,
       active: pathname === '/admin' || pathname === '/admin/properties' || pathname.startsWith('/admin/properties/')
     },
     {
-      label: 'Managers',
-      href: '/admin/managers',
-      icon: Users,
-      active: pathname === '/admin/managers' || pathname.startsWith('/admin/manager/')
+      label: 'Invoices',
+      href: '/admin/invoices',
+      icon: FileText,
+      active: pathname === '/admin/invoices' || pathname.startsWith('/admin/invoices/')
     },
     {
-      label: 'Users',
-      href: '/admin/users',
-      icon: UserCog,
-      active: pathname === '/admin/users' || pathname.startsWith('/admin/users/')
+      label: 'Quotes',
+      href: '/admin/quotes',
+      icon: Sparkles,
+      active: pathname === '/admin/quotes' || pathname.startsWith('/admin/quotes/')
     }
   ]
 

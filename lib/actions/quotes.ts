@@ -973,11 +973,11 @@ async function sendQuoteEmail(data: {
             .tagline { font-size: 12px; letter-spacing: 4px; color: #c9a227; text-transform: uppercase; }
             .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
             .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
-            .detail-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid #eee; }
-            .detail-row .label { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-            .detail-row .value { font-size: 16px; color: #1a1a2e; font-weight: 500; }
-            .detail-row:last-child { border-bottom: none; padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; }
-            .detail-row:last-child .value { font-weight: bold; font-size: 20px; color: #1a1a2e; }
+            .detail-row { padding: 8px 0; font-size: 15px; color: #333; line-height: 1.8; }
+            .detail-row .label { font-weight: 600; color: #666; }
+            .detail-row .value { font-weight: 500; color: #1a1a2e; }
+            .detail-row.total { padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; font-size: 18px; }
+            .detail-row.total .value { font-weight: bold; font-size: 20px; color: #1a1a2e; }
             .button { display: inline-block; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
             .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
             .footer-text { font-size: 12px; color: #666; }
@@ -995,16 +995,13 @@ async function sendQuoteEmail(data: {
 
               <div class="detail-box">
                 <div class="detail-row">
-                  <span class="label">Quote Number:</span>
-                  <span class="value">${data.quoteNumber}</span>
+                  <span class="label">Quote Number:</span> <span class="value">${data.quoteNumber}</span>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Valid Until:</span>
-                  <span class="value">${formatDate(data.expirationDate)}</span>
+                  <span class="label">Valid Until:</span> <span class="value">${formatDate(data.expirationDate)}</span>
                 </div>
-                <div class="detail-row">
-                  <span class="label">Total Amount:</span>
-                  <span class="value">${formatCurrency(data.total)}</span>
+                <div class="detail-row total">
+                  <span class="label">Total Amount:</span> <span class="value">${formatCurrency(data.total)}</span>
                 </div>
               </div>
 

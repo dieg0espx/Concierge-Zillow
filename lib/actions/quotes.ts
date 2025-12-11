@@ -682,7 +682,7 @@ export async function emailQuotePDF(quoteId: string) {
             .service-desc { font-size: 14px; color: #718096; line-height: 1.5; }
             .service-price { font-size: 18px; font-weight: 700; color: #2d3748; text-align: right; white-space: nowrap; }
             .total-box { background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%); color: white; padding: 35px; border-radius: 12px; margin: 35px 0; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
-            .total-label { font-size: 13px; letter-spacing: 3px; color: #d4af37; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+            .total-label { font-size: 13px; letter-spacing: 3px; color: #d4af37; text-transform: uppercase; font-weight: 700; margin-bottom: 16px; }
             .total-value { font-size: 42px; font-weight: 800; color: #ffffff; letter-spacing: 1px; }
             .notes-box { background: #fffbeb; padding: 20px 24px; border-left: 4px solid #d4af37; border-radius: 6px; margin: 25px 0; }
             .notes-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #d4af37; margin-bottom: 8px; }

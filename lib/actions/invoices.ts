@@ -633,7 +633,7 @@ async function sendPaymentConfirmationEmail(data: {
             .content { background: #ffffff; padding: 45px 40px; }
             .greeting { font-size: 16px; color: #2d3748; margin-bottom: 24px; }
             .detail-box { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 28px; border-radius: 12px; margin: 30px 0; border: 1px solid #e2e8f0; }
-            .detail-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 15px; color: #2d3748; }
+            .detail-row { display: flex; justify-content: space-between; padding: 16px 0; font-size: 15px; color: #2d3748; }
             .detail-row .label { font-weight: 600; color: #718096; }
             .detail-row .value { font-weight: 600; color: #2d3748; text-align: right; }
             .detail-row.total { padding-top: 18px; margin-top: 12px; border-top: 3px solid #d4af37; font-size: 19px; }
@@ -787,7 +787,7 @@ async function sendInvoiceEmail(data: {
             .content { background: #ffffff; padding: 45px 40px; }
             .greeting { font-size: 16px; color: #2d3748; margin-bottom: 24px; }
             .detail-box { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 28px; border-radius: 12px; margin: 30px 0; border: 1px solid #e2e8f0; }
-            .detail-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 15px; color: #2d3748; }
+            .detail-row { display: flex; justify-content: space-between; padding: 16px 0; font-size: 15px; color: #2d3748; }
             .detail-row .label { font-weight: 600; color: #718096; }
             .detail-row .value { font-weight: 600; color: #2d3748; text-align: right; }
             .detail-row.total { padding-top: 18px; margin-top: 12px; border-top: 3px solid #d4af37; font-size: 19px; }

@@ -169,144 +169,267 @@ export function InvoicesList({ invoices }: { invoices: Invoice[] }) {
         })}
       </div>
 
-      {/* Invoices Table */}
-      <Card className="glass-card-accent border-white/10 overflow-hidden">
-        <CardContent className="p-0">
-          {filteredInvoices.length === 0 ? (
-            <div className="p-12 text-center">
-              <FileText className="h-12 w-12 text-white/30 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">No invoices found</h3>
-              <p className="text-white/60 mb-4">
-                {searchTerm ? 'Try a different search term' : 'Create your first invoice to get started'}
-              </p>
-              {!searchTerm && (
-                <Link href="/admin/invoices/new">
-                  <Button className="btn-luxury">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Invoice
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-white/70">Invoice #</TableHead>
-                  <TableHead className="text-white/70">Client</TableHead>
-                  <TableHead className="text-white/70 text-right">Amount</TableHead>
-                  <TableHead className="text-white/70">Status</TableHead>
-                  <TableHead className="text-white/70">Due Date</TableHead>
-                  <TableHead className="text-white/70 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInvoices.map((invoice) => {
-                  const config = statusConfig[invoice.status]
-                  const Icon = config.icon
-                  const isOverdue = invoice.status === 'overdue' ||
-                    ((invoice.status === 'sent' || invoice.status === 'viewed') && new Date(invoice.due_date) < new Date())
+      {/* Invoices List */}
+      {filteredInvoices.length === 0 ? (
+        <Card className="glass-card-accent border-white/10">
+          <CardContent className="p-12 text-center">
+            <FileText className="h-12 w-12 text-white/30 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">No invoices found</h3>
+            <p className="text-white/60 mb-4">
+              {searchTerm ? 'Try a different search term' : 'Create your first invoice to get started'}
+            </p>
+            {!searchTerm && (
+              <Link href="/admin/invoices/new">
+                <Button className="btn-luxury">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </Button>
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Desktop Table View */}
+          <Card className="glass-card-accent border-white/10 overflow-hidden hidden md:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-white/70">Invoice #</TableHead>
+                    <TableHead className="text-white/70">Client</TableHead>
+                    <TableHead className="text-white/70 text-right">Amount</TableHead>
+                    <TableHead className="text-white/70">Status</TableHead>
+                    <TableHead className="text-white/70">Due Date</TableHead>
+                    <TableHead className="text-white/70 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.map((invoice) => {
+                    const config = statusConfig[invoice.status]
+                    const Icon = config.icon
+                    const isOverdue = invoice.status === 'overdue' ||
+                      ((invoice.status === 'sent' || invoice.status === 'viewed') && new Date(invoice.due_date) < new Date())
 
-                  return (
-                    <TableRow key={invoice.id} className="border-white/10 hover:bg-white/5">
-                      <TableCell className="font-mono text-white">
-                        {invoice.invoice_number}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-white">{invoice.client_name}</p>
-                          <p className="text-sm text-white/60">{invoice.client_email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-white">
-                        {formatCurrency(invoice.total)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${config.color} border`}>
-                          <Icon className="h-3 w-3 mr-1" />
-                          {config.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={isOverdue ? 'text-red-400' : 'text-white/70'}>
-                        <div className="flex items-center gap-1">
+                    return (
+                      <TableRow key={invoice.id} className="border-white/10 hover:bg-white/5">
+                        <TableCell className="font-mono text-white">
+                          {invoice.invoice_number}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-white">{invoice.client_name}</p>
+                            <p className="text-sm text-white/60">{invoice.client_email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-white">
+                          {formatCurrency(invoice.total)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${config.color} border`}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {config.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={isOverdue ? 'text-red-400' : 'text-white/70'}>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(invoice.due_date)}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {invoice.status === 'draft' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice)
+                                    setSendDialogOpen(true)
+                                  }}
+                                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                                <Link href={`/admin/invoices/${invoice.id}/edit`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-white/70 hover:text-white hover:bg-white/10"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice)
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {invoice.status !== 'draft' && (
+                              <>
+                                <a
+                                  href={`/api/invoice/${invoice.invoice_number}/pdf`}
+                                  download={`${invoice.invoice_number}.pdf`}
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                    title="Download PDF"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </a>
+                                <Link href={`/invoice/${invoice.invoice_number}`} target="_blank">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-white/70 hover:text-white hover:bg-white/10"
+                                    title="View Invoice"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredInvoices.map((invoice) => {
+              const config = statusConfig[invoice.status]
+              const Icon = config.icon
+              const isOverdue = invoice.status === 'overdue' ||
+                ((invoice.status === 'sent' || invoice.status === 'viewed') && new Date(invoice.due_date) < new Date())
+
+              return (
+                <Card key={invoice.id} className="glass-card-accent border-white/10">
+                  <CardContent className="p-4 space-y-4">
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-mono text-sm text-white/70 mb-1">Invoice #</p>
+                        <p className="font-bold text-white">{invoice.invoice_number}</p>
+                      </div>
+                      <Badge className={`${config.color} border`}>
+                        <Icon className="h-3 w-3 mr-1" />
+                        {config.label}
+                      </Badge>
+                    </div>
+
+                    {/* Client Info */}
+                    <div>
+                      <p className="text-sm text-white/70 mb-1">Client</p>
+                      <p className="font-medium text-white">{invoice.client_name}</p>
+                      <p className="text-sm text-white/60">{invoice.client_email}</p>
+                    </div>
+
+                    {/* Amount and Due Date */}
+                    <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                      <div>
+                        <p className="text-xs text-white/70 mb-1">Amount</p>
+                        <p className="text-xl font-bold text-white">{formatCurrency(invoice.total)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-white/70 mb-1">Due Date</p>
+                        <div className={`flex items-center gap-1 text-sm ${isOverdue ? 'text-red-400' : 'text-white/70'}`}>
                           <Clock className="h-3 w-3" />
                           {formatDate(invoice.due_date)}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {invoice.status === 'draft' && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedInvoice(invoice)
-                                  setSendDialogOpen(true)
-                                }}
-                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                              <Link href={`/admin/invoices/${invoice.id}/edit`}>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-white/70 hover:text-white hover:bg-white/10"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedInvoice(invoice)
-                                  setDeleteDialogOpen(true)
-                                }}
-                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          {invoice.status !== 'draft' && (
-                            <>
-                              <a
-                                href={`/api/invoice/${invoice.invoice_number}/pdf`}
-                                download={`${invoice.invoice_number}.pdf`}
-                              >
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                                  title="Download PDF"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </a>
-                              <Link href={`/invoice/${invoice.invoice_number}`} target="_blank">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-white/70 hover:text-white hover:bg-white/10"
-                                  title="View Invoice"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-white/10">
+                      {invoice.status === 'draft' ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice)
+                              setSendDialogOpen(true)
+                            }}
+                            className="flex-1 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                          </Button>
+                          <Link href={`/admin/invoices/${invoice.id}/edit`} className="flex-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-white/20 text-white hover:bg-white/10"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice)
+                              setDeleteDialogOpen(true)
+                            }}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <a
+                            href={`/api/invoice/${invoice.invoice_number}/pdf`}
+                            download={`${invoice.invoice_number}.pdf`}
+                            className="flex-1"
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-green-500/30 text-green-400 hover:bg-green-500/10"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              PDF
+                            </Button>
+                          </a>
+                          <Link href={`/invoice/${invoice.invoice_number}`} target="_blank" className="flex-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-white/20 text-white hover:bg-white/10"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                          </Link>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

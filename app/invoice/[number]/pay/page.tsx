@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { loadStripe } from '@stripe/stripe-js'
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -20,6 +25,118 @@ import { Logo } from '@/components/logo'
 import { getInvoiceByNumber, processPayment, InvoiceWithLineItems } from '@/lib/actions/invoices'
 import { formatCurrency } from '@/lib/utils'
 
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+// Checkout form component that uses Stripe hooks
+function CheckoutForm({
+  invoice,
+  invoiceNumber,
+  onSuccess
+}: {
+  invoice: InvoiceWithLineItems
+  invoiceNumber: string
+  onSuccess: () => void
+}) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const { toast } = useToast()
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!stripe || !elements) {
+      return
+    }
+
+    setIsProcessing(true)
+    setErrorMessage(null)
+
+    // Trigger form validation and wallet collection
+    const { error: submitError } = await elements.submit()
+    if (submitError) {
+      setErrorMessage(submitError.message || 'An error occurred')
+      setIsProcessing(false)
+      return
+    }
+
+    // Confirm the payment
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/invoice/${invoiceNumber}/pay/success`,
+      },
+      redirect: 'if_required',
+    })
+
+    if (error) {
+      setErrorMessage(error.message || 'An error occurred')
+      setIsProcessing(false)
+    } else {
+      // Payment succeeded without redirect
+      // Process the payment in our system
+      const result = await processPayment(invoiceNumber, {
+        cardNumber: '4242424242424242', // Placeholder - actual card handled by Stripe
+        expiryDate: '12/25',
+        cvv: '123',
+        cardholderName: invoice.client_name,
+      })
+
+      if (result.error) {
+        setErrorMessage(result.error)
+        setIsProcessing(false)
+      } else {
+        onSuccess()
+      }
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+        <PaymentElement
+          options={{
+            layout: 'tabs',
+          }}
+        />
+      </div>
+
+      {errorMessage && (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+          <p className="text-red-300 text-sm">{errorMessage}</p>
+        </div>
+      )}
+
+      {/* Submit Button */}
+      <Button
+        type="submit"
+        disabled={isProcessing || !stripe || !elements}
+        className="w-full btn-luxury text-lg py-6"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <Lock className="h-5 w-5 mr-2" />
+            Pay {formatCurrency(invoice?.total || 0)}
+          </>
+        )}
+      </Button>
+
+      {/* Security Badge */}
+      <div className="flex items-center justify-center gap-2 text-white/40 text-sm">
+        <Shield className="h-4 w-4" />
+        <span>Secured by Stripe</span>
+      </div>
+    </form>
+  )
+}
+
 export default function PaymentPage() {
   const params = useParams()
   const router = useRouter()
@@ -28,15 +145,9 @@ export default function PaymentPage() {
 
   const [invoice, setInvoice] = useState<InvoiceWithLineItems | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Form state
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiryDate, setExpiryDate] = useState('')
-  const [cvv, setCvv] = useState('')
-  const [cardholderName, setCardholderName] = useState('')
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadInvoice() {
@@ -45,82 +156,51 @@ export default function PaymentPage() {
       const { data, error } = await getInvoiceByNumber(invoiceNumber)
       if (error) {
         setError(error)
+        setIsLoading(false)
       } else if (data?.status === 'paid') {
         setError('This invoice has already been paid')
+        setIsLoading(false)
       } else if (data?.status === 'draft') {
         setError('This invoice has not been sent yet')
+        setIsLoading(false)
       } else {
         setInvoice(data)
+
+        // Create PaymentIntent
+        try {
+          const response = await fetch('/api/stripe/create-payment-intent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              amount: data?.total || 0,
+              invoiceNumber: data?.invoice_number,
+              clientEmail: data?.client_email,
+              clientName: data?.client_name,
+            }),
+          })
+
+          const { clientSecret: secret, error: intentError } = await response.json()
+
+          if (intentError) {
+            setError(intentError)
+          } else {
+            setClientSecret(secret)
+          }
+        } catch (err) {
+          setError('Failed to initialize payment')
+        }
+
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     loadInvoice()
   }, [invoiceNumber])
 
-  // Format card number with spaces
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
-    const matches = v.match(/\d{4,16}/g)
-    const match = (matches && matches[0]) || ''
-    const parts = []
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4))
-    }
-
-    if (parts.length) {
-      return parts.join(' ')
-    } else {
-      return value
-    }
-  }
-
-  // Format expiry date
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '')
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4)
-    }
-    return v
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Basic validation
-    if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) {
-      toast({ title: 'Error', description: 'Please enter a valid card number', variant: 'destructive' })
-      return
-    }
-    if (!expiryDate || expiryDate.length < 5) {
-      toast({ title: 'Error', description: 'Please enter a valid expiry date', variant: 'destructive' })
-      return
-    }
-    if (!cvv || cvv.length < 3) {
-      toast({ title: 'Error', description: 'Please enter a valid CVV', variant: 'destructive' })
-      return
-    }
-    if (!cardholderName.trim()) {
-      toast({ title: 'Error', description: 'Please enter the cardholder name', variant: 'destructive' })
-      return
-    }
-
-    setIsProcessing(true)
-
-    const result = await processPayment(invoiceNumber, {
-      cardNumber: cardNumber.replace(/\s/g, ''),
-      expiryDate,
-      cvv,
-      cardholderName,
-    })
-
-    if (result.error) {
-      toast({ title: 'Payment Failed', description: result.error, variant: 'destructive' })
-      setIsProcessing(false)
-    } else {
-      setPaymentSuccess(true)
-    }
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true)
   }
 
   if (isLoading) {
@@ -178,6 +258,44 @@ export default function PaymentPage() {
         </Card>
       </div>
     )
+  }
+
+  const stripeOptions = {
+    clientSecret: clientSecret!,
+    appearance: {
+      theme: 'night' as const,
+      variables: {
+        colorPrimary: '#d4af37',
+        colorBackground: 'rgba(255, 255, 255, 0.05)',
+        colorText: '#ffffff',
+        colorDanger: '#ef4444',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        borderRadius: '8px',
+        spacingUnit: '4px',
+      },
+      rules: {
+        '.Input': {
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: 'none',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        },
+        '.Input:focus': {
+          border: '1px solid #d4af37',
+          boxShadow: '0 0 0 1px #d4af37',
+        },
+        '.Label': {
+          color: 'rgba(255, 255, 255, 0.7)',
+        },
+        '.Tab': {
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        },
+        '.Tab--selected': {
+          border: '1px solid #d4af37',
+          backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        },
+      },
+    },
   }
 
   return (
@@ -276,102 +394,23 @@ export default function PaymentPage() {
               Payment Details
             </CardTitle>
             <CardDescription className="text-white/60">
-              Enter your card information to complete the payment
+              Enter your payment information to complete the transaction
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Card Number */}
-              <div className="space-y-2">
-                <Label htmlFor="cardNumber" className="text-white/90">Card Number</Label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                  <Input
-                    id="cardNumber"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                    placeholder="1234 5678 9012 3456"
-                    maxLength={19}
-                    className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12 font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Expiry and CVV */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expiry" className="text-white/90">Expiry Date</Label>
-                  <Input
-                    id="expiry"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(formatExpiry(e.target.value))}
-                    placeholder="MM/YY"
-                    maxLength={5}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12 font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cvv" className="text-white/90">CVV</Label>
-                  <Input
-                    id="cvv"
-                    value={cvv}
-                    onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="123"
-                    maxLength={4}
-                    type="password"
-                    className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12 font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Cardholder Name */}
-              <div className="space-y-2">
-                <Label htmlFor="cardholderName" className="text-white/90">Cardholder Name</Label>
-                <Input
-                  id="cardholderName"
-                  value={cardholderName}
-                  onChange={(e) => setCardholderName(e.target.value)}
-                  placeholder="John Smith"
-                  className="bg-white/5 border-white/20 text-white placeholder:text-white/50 h-12"
+            {clientSecret && invoice ? (
+              <Elements stripe={stripePromise} options={stripeOptions}>
+                <CheckoutForm
+                  invoice={invoice}
+                  invoiceNumber={invoiceNumber}
+                  onSuccess={handlePaymentSuccess}
                 />
+              </Elements>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
               </div>
-
-              {/* Test Card Notice */}
-              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 space-y-2">
-                <p className="text-blue-300 text-sm font-medium">Demo Mode - Test Cards</p>
-                <div className="text-blue-300/80 text-xs space-y-1">
-                  <p><span className="font-mono bg-blue-500/20 px-1.5 py-0.5 rounded">4242 4242 4242 4242</span> - Successful payment</p>
-                  <p><span className="font-mono bg-red-500/20 px-1.5 py-0.5 rounded text-red-300">4000 0000 0000 0002</span> - Card declined</p>
-                  <p><span className="font-mono bg-yellow-500/20 px-1.5 py-0.5 rounded text-yellow-300">4000 0000 0000 9995</span> - Insufficient funds</p>
-                </div>
-                <p className="text-blue-300/60 text-xs mt-2">Use any future expiry date and any 3-digit CVV.</p>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full btn-luxury text-lg py-6"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="h-5 w-5 mr-2" />
-                    Pay {formatCurrency(invoice?.total || 0)}
-                  </>
-                )}
-              </Button>
-
-              {/* Security Badge */}
-              <div className="flex items-center justify-center gap-2 text-white/40 text-sm">
-                <Shield className="h-4 w-4" />
-                <span>Your payment information is secure</span>
-              </div>
-            </form>
+            )}
           </CardContent>
         </Card>
       </main>

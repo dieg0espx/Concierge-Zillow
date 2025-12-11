@@ -629,8 +629,11 @@ async function sendPaymentConfirmationEmail(data: {
             .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
             .success-badge { display: inline-block; background: #dcfce7; color: #166534; padding: 10px 20px; border-radius: 25px; font-weight: bold; margin-bottom: 20px; }
             .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
-            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-            .detail-row:last-child { border-bottom: none; font-weight: bold; font-size: 18px; padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; }
+            .detail-row { padding: 8px 0; font-size: 15px; color: #333; line-height: 1.8; }
+            .detail-row .label { font-weight: 600; color: #666; }
+            .detail-row .value { font-weight: 500; color: #1a1a2e; }
+            .detail-row.total { padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; font-size: 18px; }
+            .detail-row.total .value { font-weight: bold; font-size: 20px; color: #1a1a2e; }
             .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
             .footer-text { font-size: 12px; color: #666; }
           </style>
@@ -650,16 +653,13 @@ async function sendPaymentConfirmationEmail(data: {
 
               <div class="detail-box">
                 <div class="detail-row">
-                  <span>Invoice Number</span>
-                  <span>${data.invoiceNumber}</span>
+                  <span class="label">Invoice Number:</span> <span class="value">${data.invoiceNumber}</span>
                 </div>
                 <div class="detail-row">
-                  <span>Payment Date</span>
-                  <span>${formatDate(data.paidAt)}</span>
+                  <span class="label">Payment Date:</span> <span class="value">${formatDate(data.paidAt)}</span>
                 </div>
-                <div class="detail-row">
-                  <span>Amount Paid</span>
-                  <span>${formatCurrency(data.total)}</span>
+                <div class="detail-row total">
+                  <span class="label">Amount Paid:</span> <span class="value">${formatCurrency(data.total)}</span>
                 </div>
               </div>
 

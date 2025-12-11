@@ -49,11 +49,17 @@ export async function GET(
       <QuotePDF quote={quoteWithItems} />
     )
 
-    // Return PDF
+    // Return PDF with proper headers
     return new NextResponse(pdfBuffer, {
+      status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${quoteNumber}.pdf"`,
+        'Content-Length': pdfBuffer.length.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch (error) {

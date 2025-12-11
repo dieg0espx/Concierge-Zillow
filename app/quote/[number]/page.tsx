@@ -34,6 +34,7 @@ import {
 import { Logo } from '@/components/logo'
 import { getQuoteByNumber, acceptQuote, declineQuote, QuoteWithItems, QuoteStatus } from '@/lib/actions/quotes'
 import { formatCurrency } from '@/lib/utils'
+import { generateQuotePDF } from '@/lib/pdf-generator'
 
 const statusConfig: Record<QuoteStatus, { label: string; color: string; icon: any }> = {
   draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: FileText },
@@ -120,6 +121,33 @@ export default function QuoteViewPage() {
     setDeclineDialogOpen(false)
   }
 
+  const handleDownloadPDF = async () => {
+    if (!quote) return
+
+    try {
+      // Fetch full quote data with service items
+      const response = await fetch(`/api/quote-data/${quote.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch quote data')
+      }
+      const fullQuote = await response.json()
+
+      const pdf = generateQuotePDF(fullQuote)
+      pdf.save(`${quote.quote_number}.pdf`)
+      toast({
+        title: 'PDF Downloaded',
+        description: `Quote ${quote.quote_number} has been downloaded.`,
+      })
+    } catch (error) {
+      console.error('PDF generation error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'long',
@@ -176,19 +204,15 @@ export default function QuoteViewPage() {
                 </div>
               </div>
             </div>
-            <a
-              href={`/api/quote/${quote?.quote_number}/pdf`}
-              download={`${quote?.quote_number}.pdf`}
+            <Button
+              onClick={handleDownloadPDF}
+              variant="outline"
+              size="sm"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20"
             >
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/10 text-white border-white/20 hover:bg-white/20"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </Button>
-            </a>
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
           </div>
         </div>
       </header>

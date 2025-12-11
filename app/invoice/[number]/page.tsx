@@ -21,6 +21,8 @@ import Link from 'next/link'
 import { Logo } from '@/components/logo'
 import { getInvoiceByNumber, InvoiceWithLineItems, InvoiceStatus } from '@/lib/actions/invoices'
 import { formatCurrency } from '@/lib/utils'
+import { generateInvoicePDF } from '@/lib/pdf-generator'
+import { useToast } from '@/hooks/use-toast'
 
 const statusConfig: Record<InvoiceStatus, { label: string; color: string; icon: any }> = {
   draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: FileText },
@@ -36,6 +38,7 @@ export default function InvoiceViewPage() {
   const [invoice, setInvoice] = useState<InvoiceWithLineItems | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     async function loadInvoice() {
@@ -52,6 +55,33 @@ export default function InvoiceViewPage() {
 
     loadInvoice()
   }, [invoiceNumber])
+
+  const handleDownloadPDF = async () => {
+    if (!invoice) return
+
+    try {
+      // Fetch full invoice data with line items
+      const response = await fetch(`/api/invoice-data/${invoice.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoice data')
+      }
+      const fullInvoice = await response.json()
+
+      const pdf = generateInvoicePDF(fullInvoice)
+      pdf.save(`${invoice.invoice_number}.pdf`)
+      toast({
+        title: 'PDF Downloaded',
+        description: `Invoice ${invoice.invoice_number} has been downloaded.`,
+      })
+    } catch (error) {
+      console.error('PDF generation error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -109,19 +139,15 @@ export default function InvoiceViewPage() {
                 </div>
               </div>
             </div>
-            <a
-              href={`/api/invoice/${invoice.invoice_number}/pdf`}
-              download={`${invoice.invoice_number}.pdf`}
+            <Button
+              onClick={handleDownloadPDF}
+              variant="outline"
+              size="sm"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20"
             >
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/10 text-white border-white/20 hover:bg-white/20"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </Button>
-            </a>
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
           </div>
         </div>
       </header>

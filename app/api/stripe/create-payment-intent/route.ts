@@ -14,9 +14,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // TESTING: Override amount to $1 for production testing
+    // TODO: Remove this override after testing is complete
+    const testAmount = 1 // $1 USD for testing
+
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: Math.round(testAmount * 100), // Convert to cents - using testAmount instead of amount
       currency: 'usd',
       automatic_payment_methods: {
         enabled: true,

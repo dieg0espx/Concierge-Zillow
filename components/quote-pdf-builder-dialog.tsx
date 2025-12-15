@@ -210,58 +210,90 @@ export function QuotePDFBuilderDialog({
       // Small delay to ensure full render
       await new Promise(resolve => setTimeout(resolve, 300))
 
-      // Create an isolated iframe to avoid oklch color parsing issues
-      const iframe = document.createElement('iframe')
-      iframe.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 500px; height: 2000px; border: none;'
-      document.body.appendChild(iframe)
+      // Helper function to copy computed styles as inline styles
+      const copyComputedStyles = (source: Element, target: HTMLElement) => {
+        const computedStyle = window.getComputedStyle(source)
+        const importantStyles = [
+          'display', 'flex-direction', 'justify-content', 'align-items', 'gap',
+          'width', 'height', 'max-width', 'min-height',
+          'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+          'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+          'background-color', 'background-image', 'background-size', 'background-position',
+          'color', 'font-size', 'font-weight', 'font-family', 'line-height', 'letter-spacing',
+          'text-align', 'text-transform',
+          'border', 'border-width', 'border-style', 'border-color', 'border-radius',
+          'border-top', 'border-bottom', 'border-left', 'border-right',
+          'box-shadow', 'overflow', 'position', 'top', 'right', 'bottom', 'left',
+          'object-fit', 'opacity', 'z-index', 'flex', 'flex-grow', 'flex-shrink',
+        ]
 
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
-      if (!iframeDoc) {
-        throw new Error('Could not access iframe document')
+        importantStyles.forEach(prop => {
+          const value = computedStyle.getPropertyValue(prop)
+          if (value && value !== 'none' && value !== 'auto' && value !== 'normal') {
+            // Convert oklch colors to hex fallbacks
+            if (value.includes('oklch')) {
+              if (prop.includes('background')) {
+                target.style.setProperty(prop, '#ffffff')
+              } else if (prop.includes('color')) {
+                target.style.setProperty(prop, '#000000')
+              }
+            } else {
+              target.style.setProperty(prop, value)
+            }
+          }
+        })
       }
 
-      // Add clean styles to iframe (no oklch colors)
-      iframeDoc.head.innerHTML = `
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Inter, system-ui, -apple-system, sans-serif;
-          }
-          .bg-white { background-color: #ffffff; }
-          .bg-gray-900 { background-color: #111827; }
-          .bg-gray-100 { background-color: #f3f4f6; }
-          .border-gray-100 { border-color: #f3f4f6; }
-          .border-gray-200 { border-color: #e5e7eb; }
-          .text-white { color: #ffffff; }
-          .text-gray-900 { color: #111827; }
-          .text-gray-700 { color: #374151; }
-          .text-gray-500 { color: #6b7280; }
-          .text-gray-400 { color: #9ca3af; }
-          .text-gray-300 { color: #d1d5db; }
-          .text-blue-500 { color: #3b82f6; }
-          .rounded-2xl { border-radius: 1rem; }
-          .rounded-full { border-radius: 9999px; }
-          .rounded-lg { border-radius: 0.5rem; }
-          .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-          .shadow { box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); }
-          .overflow-hidden { overflow: hidden; }
-          .object-cover { object-fit: cover; }
-          img { max-width: 100%; height: auto; }
-        </style>
-      `
+      // Deep clone with computed styles
+      const cloneWithStyles = (element: Element): HTMLElement => {
+        const clone = element.cloneNode(false) as HTMLElement
+        if (element instanceof HTMLElement) {
+          copyComputedStyles(element, clone)
+        }
 
-      // Clone and append content to iframe
-      const clonedContent = ticketElement.cloneNode(true) as HTMLElement
-      clonedContent.style.backgroundColor = '#ffffff'
-      iframeDoc.body.appendChild(clonedContent)
-      iframeDoc.body.style.backgroundColor = '#ffffff'
+        // Handle images specially
+        if (element instanceof HTMLImageElement && clone instanceof HTMLImageElement) {
+          clone.src = element.src
+          clone.style.width = element.offsetWidth + 'px'
+          clone.style.height = element.offsetHeight + 'px'
+          clone.style.objectFit = 'cover'
+        }
 
-      // Wait for images to load in iframe
-      const iframeImages = iframeDoc.querySelectorAll('img')
+        // Recursively clone children
+        Array.from(element.children).forEach(child => {
+          clone.appendChild(cloneWithStyles(child))
+        })
+
+        // Copy text content for text nodes
+        if (element.childNodes.length > 0) {
+          Array.from(element.childNodes).forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+              clone.appendChild(document.createTextNode(node.textContent))
+            }
+          })
+        }
+
+        return clone
+      }
+
+      // Create styled clone
+      const styledClone = cloneWithStyles(ticketElement)
+      styledClone.style.width = '400px'
+      styledClone.style.backgroundColor = '#ffffff'
+      styledClone.style.borderRadius = '16px'
+      styledClone.style.overflow = 'hidden'
+      styledClone.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)'
+
+      // Create container for capture
+      const container = document.createElement('div')
+      container.style.cssText = 'position: fixed; left: -9999px; top: 0; background: #ffffff; padding: 0;'
+      container.appendChild(styledClone)
+      document.body.appendChild(container)
+
+      // Wait for images in clone
+      const clonedImages = styledClone.querySelectorAll('img')
       await Promise.all(
-        Array.from(iframeImages).map((img) => {
+        Array.from(clonedImages).map((img) => {
           if (img.complete) return Promise.resolve()
           return new Promise((resolve) => {
             img.onload = resolve
@@ -273,19 +305,17 @@ export function QuotePDFBuilderDialog({
       // Small delay for rendering
       await new Promise(resolve => setTimeout(resolve, 200))
 
-      // Capture from iframe
-      const canvas = await html2canvas(clonedContent, {
+      // Capture with html2canvas
+      const canvas = await html2canvas(styledClone, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        windowWidth: 500,
-        windowHeight: 2000,
       })
 
-      // Clean up iframe
-      document.body.removeChild(iframe)
+      // Clean up
+      document.body.removeChild(container)
 
       // Calculate PDF dimensions based on canvas aspect ratio
       const imgWidth = canvas.width
@@ -570,32 +600,6 @@ export function QuotePDFBuilderDialog({
                   </div>
                 </div>
 
-                {/* Header Icon Selection */}
-                <div className="space-y-2">
-                  <Label className="text-white/90 text-sm">Header Icon</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { value: 'plane', label: 'Airplane', icon: Plane },
-                      { value: 'car', label: 'Car', icon: Car },
-                      { value: 'yacht', label: 'Yacht', icon: Ship },
-                      { value: 'none', label: 'No Icon', icon: null },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setHeaderIcon(option.value as 'plane' | 'car' | 'yacht' | 'none')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                          headerIcon === option.value
-                            ? 'bg-white text-black border-white'
-                            : 'bg-white/5 text-white/70 border-white/20 hover:border-white/40'
-                        }`}
-                      >
-                        {option.icon && <option.icon className="h-4 w-4" />}
-                        <span className="text-sm">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* Service Items Section */}
@@ -947,9 +951,6 @@ export function QuotePDFBuilderDialog({
                   {/* Title Header */}
                   <div className="bg-white p-4 text-center border-b border-gray-100">
                     <h1 className="text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
-                      {headerIcon === 'plane' && <span>✈️</span>}
-                      {headerIcon === 'car' && <span>🚗</span>}
-                      {headerIcon === 'yacht' && <span>🛥️</span>}
                       {headerTitle || 'Private Quotes'}
                     </h1>
                     {headerSubtitle && (

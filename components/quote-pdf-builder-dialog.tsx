@@ -27,6 +27,7 @@ import {
   Plane,
   Car,
   Ship,
+  User,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
@@ -168,6 +169,39 @@ export function QuotePDFBuilderDialog({
     })
   }
 
+  // Helper function to convert oklch/oklab colors to hex
+  const convertToHex = (color: string): string => {
+    if (color.startsWith('#')) return color
+    if (color.includes('oklch') || color.includes('oklab')) {
+      // Map common oklch/oklab values to hex equivalents
+      if (color.includes('0.985') || color.includes('0.99') || color.includes('0.98')) return '#ffffff'
+      if (color.includes('0.129') || color.includes('0.13') || color.includes('0.14')) return '#111827'
+      if (color.includes('0.967') || color.includes('0.97') || color.includes('0.96')) return '#f3f4f6'
+      if (color.includes('0.21') || color.includes('0.22') || color.includes('0.20')) return '#1f2937'
+      if (color.includes('0.37') || color.includes('0.38') || color.includes('0.36')) return '#374151'
+      if (color.includes('0.446') || color.includes('0.45') || color.includes('0.44')) return '#4b5563'
+      if (color.includes('0.556') || color.includes('0.55') || color.includes('0.56') || color.includes('0.54')) return '#6b7280'
+      if (color.includes('0.704') || color.includes('0.70') || color.includes('0.71')) return '#9ca3af'
+      if (color.includes('0.872') || color.includes('0.87') || color.includes('0.86')) return '#d1d5db'
+      if (color.includes('0.928') || color.includes('0.93') || color.includes('0.92')) return '#e5e7eb'
+      if (color.includes('0.588') && color.includes('250')) return '#3b82f6'
+      // Default fallbacks based on lightness
+      const match = color.match(/[\d.]+/)
+      if (match) {
+        const lightness = parseFloat(match[0])
+        if (lightness > 0.9) return '#ffffff'
+        if (lightness > 0.7) return '#d1d5db'
+        if (lightness > 0.5) return '#6b7280'
+        if (lightness > 0.3) return '#374151'
+        return '#111827'
+      }
+      return '#000000'
+    }
+    if (color.startsWith('rgba') || color.startsWith('rgb')) return color
+    if (color === 'transparent') return 'transparent'
+    return color
+  }
+
   const handleDownloadPDF = async () => {
     if (!previewRef.current) {
       toast({
@@ -184,11 +218,10 @@ export function QuotePDFBuilderDialog({
       // Switch to preview tab if not already there
       if (activeTab !== 'preview') {
         setActiveTab('preview')
-        // Wait for the tab to switch and render
         await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      // Find the actual ticket preview element inside the preview container
+      // Find the ticket preview element
       const ticketElement = previewRef.current.querySelector('.max-w-\\[400px\\]') as HTMLElement
 
       if (!ticketElement) {
@@ -207,224 +240,173 @@ export function QuotePDFBuilderDialog({
         })
       )
 
-      // Use browser print to PDF - opens print dialog where user can save as PDF
-      // This handles all modern CSS including oklch/oklab colors
-      const printWindow = window.open('', '_blank', 'width=500,height=800')
+      // Store original styles to restore later
+      const originalStyles: Map<HTMLElement, string> = new Map()
 
-      if (!printWindow) {
-        throw new Error('Could not open print window. Please allow popups.')
-      }
+      // Apply inline hex colors to ALL elements BEFORE html2canvas processes them
+      const allElements = ticketElement.querySelectorAll('*')
+      allElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          // Save original inline style
+          originalStyles.set(el, el.style.cssText)
 
-      // Get all images and convert to base64 for the print window
-      const imagePromises = Array.from(ticketElement.querySelectorAll('img')).map(async (img) => {
-        try {
-          const response = await fetch(img.src)
-          const blob = await response.blob()
-          return new Promise<{src: string, base64: string}>((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              resolve({ src: img.src, base64: reader.result as string })
-            }
-            reader.readAsDataURL(blob)
-          })
-        } catch {
-          return { src: img.src, base64: img.src }
+          const computed = window.getComputedStyle(el)
+
+          // Fix background color
+          const bgColor = computed.backgroundColor
+          if (bgColor) {
+            el.style.backgroundColor = convertToHex(bgColor)
+          }
+
+          // Fix text color
+          const textColor = computed.color
+          if (textColor) {
+            el.style.color = convertToHex(textColor)
+          }
+
+          // Fix border colors
+          const borderColor = computed.borderColor
+          if (borderColor) {
+            el.style.borderColor = convertToHex(borderColor)
+          }
         }
       })
 
-      const imageData = await Promise.all(imagePromises)
+      // Also fix the root element
+      originalStyles.set(ticketElement, ticketElement.style.cssText)
+      const rootComputed = window.getComputedStyle(ticketElement)
+      ticketElement.style.backgroundColor = convertToHex(rootComputed.backgroundColor)
+      ticketElement.style.color = convertToHex(rootComputed.color)
 
-      // Clone the HTML content
-      let htmlContent = ticketElement.outerHTML
-
-      // Replace image sources with base64
-      imageData.forEach(({ src, base64 }) => {
-        htmlContent = htmlContent.replace(new RegExp(src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), base64)
+      // Fix image containers first - set explicit dimensions
+      const imageContainers = ticketElement.querySelectorAll('.h-48')
+      imageContainers.forEach((container) => {
+        if (container instanceof HTMLElement) {
+          const rect = container.getBoundingClientRect()
+          originalStyles.set(container, container.style.cssText)
+          container.style.width = rect.width + 'px'
+          container.style.height = rect.height + 'px'
+          container.style.overflow = 'hidden'
+        }
       })
 
-      // Replace Lucide SVG icons with inline SVG (they come as <svg> elements from React)
-      // The SVGs should already be in the HTML, but we need to ensure they're styled correctly
-      // Add inline styles to SVG elements
-      htmlContent = htmlContent.replace(/<svg/g, '<svg style="width: 1.25rem; height: 1.25rem; display: inline-block; vertical-align: middle;"')
+      // Fix all images - handle logo and content images differently
+      const allImgs = ticketElement.querySelectorAll('img')
+      allImgs.forEach((img) => {
+        if (img instanceof HTMLImageElement) {
+          const rect = img.getBoundingClientRect()
+          const computed = window.getComputedStyle(img)
+          originalStyles.set(img, img.style.cssText)
 
-      // Write the print document
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${quote.quote_number}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          // Check if this is the logo (in the header with object-contain)
+          const isLogo = computed.objectFit === 'contain' || img.alt === 'Cadiz & Lluis'
 
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
+          if (isLogo) {
+            // For logo: preserve aspect ratio by only setting max dimensions
+            img.style.maxWidth = rect.width + 'px'
+            img.style.maxHeight = rect.height + 'px'
+            img.style.width = 'auto'
+            img.style.height = 'auto'
+            img.style.objectFit = 'contain'
+          } else {
+            // For content images: html2canvas doesn't support object-fit well
+            // We need to use a different approach - set explicit dimensions
+            const parent = img.parentElement
+            if (parent) {
+              const parentRect = parent.getBoundingClientRect()
+              // Calculate the aspect ratio to simulate object-cover
+              const imgNaturalWidth = img.naturalWidth || rect.width
+              const imgNaturalHeight = img.naturalHeight || rect.height
+              const containerRatio = parentRect.width / parentRect.height
+              const imageRatio = imgNaturalWidth / imgNaturalHeight
 
-            body {
-              font-family: 'Inter', system-ui, -apple-system, sans-serif;
-              background: #ffffff;
-              padding: 20px;
-              display: flex;
-              justify-content: center;
-            }
-
-            .ticket-container {
-              max-width: 400px;
-              background: #ffffff;
-              border-radius: 16px;
-              overflow: hidden;
-              box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            }
-
-            /* Tailwind-like utilities */
-            .bg-white { background-color: #ffffff; }
-            .bg-gray-900 { background-color: #111827; }
-            .bg-gray-100 { background-color: #f3f4f6; }
-            .bg-black\\/60 { background-color: rgba(0,0,0,0.6); }
-            .bg-white\\/95 { background-color: rgba(255,255,255,0.95); }
-
-            .text-white { color: #ffffff; }
-            .text-gray-900 { color: #111827; }
-            .text-gray-700 { color: #374151; }
-            .text-gray-500 { color: #6b7280; }
-            .text-gray-400 { color: #9ca3af; }
-            .text-gray-300 { color: #d1d5db; }
-            .text-blue-500 { color: #3b82f6; }
-            .text-white\\/60 { color: rgba(255,255,255,0.6); }
-            .text-white\\/50 { color: rgba(255,255,255,0.5); }
-            .text-white\\/70 { color: rgba(255,255,255,0.7); }
-
-            .text-xs { font-size: 0.75rem; line-height: 1rem; }
-            .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-            .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-            .text-2xl { font-size: 1.5rem; line-height: 2rem; }
-            .text-\\[9px\\] { font-size: 9px; }
-            .text-\\[10px\\] { font-size: 10px; }
-
-            .font-bold { font-weight: 700; }
-            .font-semibold { font-weight: 600; }
-
-            .text-center { text-align: center; }
-            .text-left { text-align: left; }
-            .text-right { text-align: right; }
-
-            .uppercase { text-transform: uppercase; }
-            .tracking-wider { letter-spacing: 0.05em; }
-            .tracking-widest { letter-spacing: 0.1em; }
-
-            .p-4 { padding: 1rem; }
-            .p-5 { padding: 1.25rem; }
-            .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
-            .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
-            .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-            .py-1\\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
-            .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-            .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-            .px-2\\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
-            .pt-4 { padding-top: 1rem; }
-
-            .mb-1 { margin-bottom: 0.25rem; }
-            .mb-3 { margin-bottom: 0.75rem; }
-            .mb-4 { margin-bottom: 1rem; }
-            .mb-5 { margin-bottom: 1.25rem; }
-            .mt-1 { margin-top: 0.25rem; }
-            .mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }
-
-            .gap-1 { gap: 0.25rem; }
-            .gap-1\\.5 { gap: 0.375rem; }
-            .gap-2 { gap: 0.5rem; }
-
-            .flex { display: flex; }
-            .flex-1 { flex: 1 1 0%; }
-            .flex-col { flex-direction: column; }
-            .items-center { align-items: center; }
-            .justify-center { justify-content: center; }
-            .justify-between { justify-content: space-between; }
-
-            .w-full { width: 100%; }
-            .w-10 { width: 2.5rem; }
-            .h-10 { height: 2.5rem; }
-            .h-44 { height: 11rem; }
-            .h-px { height: 1px; }
-
-            .rounded-full { border-radius: 9999px; }
-            .rounded-2xl { border-radius: 1rem; }
-
-            .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
-            .border-b-8 { border-bottom-width: 8px; border-bottom-style: solid; }
-            .border-t { border-top-width: 1px; border-top-style: solid; }
-            .border-gray-100 { border-color: #f3f4f6; }
-            .border-gray-200 { border-color: #e5e7eb; }
-            .border-white\\/10 { border-color: rgba(255,255,255,0.1); }
-
-            .overflow-hidden { overflow: hidden; }
-            .relative { position: relative; }
-            .absolute { position: absolute; }
-            .top-3 { top: 0.75rem; }
-            .left-3 { left: 0.75rem; }
-            .bottom-3 { bottom: 0.75rem; }
-            .right-3 { right: 0.75rem; }
-
-            .object-cover { object-fit: cover; }
-            .object-contain { object-fit: contain; }
-
-            .shadow { box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); }
-            .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-
-            .backdrop-blur-sm { backdrop-filter: blur(4px); }
-
-            img {
-              max-width: 100%;
-              height: auto;
-            }
-
-            svg {
-              width: 1.25rem;
-              height: 1.25rem;
-              display: inline-block;
-              vertical-align: middle;
-              stroke: currentColor;
-              fill: none;
-            }
-
-            .h-5 { height: 1.25rem; }
-            .w-5 { width: 1.25rem; }
-
-            @media print {
-              body {
-                padding: 0;
-                background: #ffffff;
+              if (imageRatio > containerRatio) {
+                // Image is wider - fit by height, center horizontally
+                const scaledWidth = parentRect.height * imageRatio
+                img.style.width = scaledWidth + 'px'
+                img.style.height = parentRect.height + 'px'
+                img.style.marginLeft = -((scaledWidth - parentRect.width) / 2) + 'px'
+                img.style.marginTop = '0'
+              } else {
+                // Image is taller - fit by width, center vertically
+                const scaledHeight = parentRect.width / imageRatio
+                img.style.width = parentRect.width + 'px'
+                img.style.height = scaledHeight + 'px'
+                img.style.marginTop = -((scaledHeight - parentRect.height) / 2) + 'px'
+                img.style.marginLeft = '0'
               }
-              .ticket-container {
-                box-shadow: none;
-                max-width: 100%;
-              }
+              img.style.objectFit = 'none'
+              img.style.maxWidth = 'none'
+              img.style.maxHeight = 'none'
             }
-          </style>
-        </head>
-        <body>
-          <div class="ticket-container">
-            ${htmlContent}
-          </div>
-          <script>
-            // Auto-print when loaded
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 500);
-            };
-          </script>
-        </body>
-        </html>
-      `)
+          }
+        }
+      })
 
-      printWindow.document.close()
+      // Fix badge alignment for html2canvas - move text up with simple offset
+      const badges = ticketElement.querySelectorAll('.rounded-full')
+      badges.forEach((badge) => {
+        if (badge instanceof HTMLElement) {
+          // Save original style
+          originalStyles.set(badge, badge.style.cssText)
+
+          // Fix text spans inside badges - move UP with negative margin
+          const spans = badge.querySelectorAll('span')
+          spans.forEach((span) => {
+            if (span instanceof HTMLElement) {
+              originalStyles.set(span, span.style.cssText)
+              span.style.position = 'relative'
+              span.style.top = '-5px'
+            }
+          })
+
+          // Fix SVG icons
+          const svgs = badge.querySelectorAll('svg')
+          svgs.forEach((svg) => {
+            if (svg instanceof SVGElement) {
+              const svgEl = svg as unknown as HTMLElement
+              originalStyles.set(svgEl, svgEl.style.cssText)
+              svg.style.position = 'relative'
+              svg.style.top = '0px'
+            }
+          })
+        }
+      })
+
+      // Capture with html2canvas
+      const canvas = await html2canvas(ticketElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        imageTimeout: 15000,
+      })
+
+      // Restore original styles
+      originalStyles.forEach((originalStyle, el) => {
+        el.style.cssText = originalStyle
+      })
+
+      // Create PDF with custom page size
+      const imgWidth = canvas.width
+      const imgHeight = canvas.height
+      const pdfWidth = 106 // mm
+      const pdfHeight = (imgHeight / imgWidth) * pdfWidth
+
+      const pdf = new jsPDF({
+        orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [pdfWidth, pdfHeight],
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`${quote.quote_number}.pdf`)
 
       toast({
-        title: 'Print Dialog Opened',
-        description: 'Select "Save as PDF" in the print dialog to download your quote.',
+        title: 'PDF Downloaded',
+        description: 'Your quote PDF has been saved.',
       })
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -665,32 +647,6 @@ export function QuotePDFBuilderDialog({
                   </div>
                 </div>
 
-                {/* Header Icon Selection */}
-                <div className="space-y-2">
-                  <Label className="text-white/90 text-sm">Header Icon</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { value: 'plane', label: 'Airplane', icon: Plane },
-                      { value: 'car', label: 'Car', icon: Car },
-                      { value: 'yacht', label: 'Yacht', icon: Ship },
-                      { value: 'none', label: 'No Icon', icon: null },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setHeaderIcon(option.value as 'plane' | 'car' | 'yacht' | 'none')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                          headerIcon === option.value
-                            ? 'bg-white text-black border-white'
-                            : 'bg-white/5 text-white/70 border-white/20 hover:border-white/40'
-                        }`}
-                      >
-                        {option.icon && <option.icon className="h-4 w-4" />}
-                        <span className="text-sm">{option.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* Service Items Section */}
@@ -1020,17 +976,14 @@ export function QuotePDFBuilderDialog({
             <div className="h-full rounded-xl overflow-hidden border border-white/20 bg-white">
               <div ref={previewRef} className="h-full overflow-y-auto p-6" style={{ backgroundColor: '#f8f8f8' }}>
                 {/* PDF Preview - Ticket Style */}
-                <div className="max-w-[400px] mx-auto bg-white rounded-2xl shadow-lg overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  {/* Top Header with Logo - Dark like footer */}
+                <div className="max-w-[400px] mx-auto bg-white shadow-lg overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  {/* Top Header with Logo - Navy Blue */}
                   <div className="bg-gray-900 px-5 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src="/logo/CL White LOGO.png"
-                        alt="Cadiz & Lluis"
-                        className="h-10 w-10 object-contain"
-                      />
-                      <span className="text-sm font-bold text-white tracking-widest">CADIZ & LLUIS</span>
-                    </div>
+                    <img
+                      src="/logo/CL White LOGO.png"
+                      alt="Cadiz & Lluis"
+                      className="h-10 w-auto object-contain"
+                    />
                     <div className="text-right">
                       <p className="text-[10px] text-white/60 uppercase tracking-wider">{quote.quote_number}</p>
                       <p className="text-[9px] text-white/50">
@@ -1039,21 +992,18 @@ export function QuotePDFBuilderDialog({
                     </div>
                   </div>
 
-                  {/* Title Header - Dark like footer */}
-                  <div className="bg-gray-900 p-4 text-center border-t border-white/10">
-                    <h1 className="text-xl font-bold text-white flex items-center justify-center gap-2">
-                      {headerIcon === 'plane' && <Plane className="h-5 w-5" />}
-                      {headerIcon === 'car' && <Car className="h-5 w-5" />}
-                      {headerIcon === 'yacht' && <Ship className="h-5 w-5" />}
+                  {/* Title Header - White Background */}
+                  <div className="bg-white p-4 text-center border-b border-gray-100">
+                    <h1 className="text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
                       {headerTitle || 'Private Quotes'}
                     </h1>
                     {headerSubtitle && (
-                      <p className="text-xs text-white/60 mt-1">{headerSubtitle}</p>
+                      <p className="text-xs text-gray-500 mt-1">{headerSubtitle}</p>
                     )}
                   </div>
 
                   {/* Client Info */}
-                  <div className="bg-white px-5 py-3 border-b border-gray-100">
+                  <div className="bg-white px-5 pt-3 pb-6 border-b border-gray-100">
                     <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1">Prepared For</p>
                     <p className="text-sm font-semibold text-gray-900">{quote.client_name}</p>
                     <p className="text-xs text-gray-500">{quote.client_email}</p>
@@ -1081,21 +1031,21 @@ export function QuotePDFBuilderDialog({
                         {displayImages.length > 0 && (
                           <div className="relative">
                             {/* Main image */}
-                            <div className="relative h-44 overflow-hidden">
+                            <div className="relative h-48 overflow-hidden">
                               <img
                                 src={displayImages[0]}
                                 alt="Main"
                                 className="w-full h-full object-cover"
                               />
                               {/* Overlay badge with name */}
-                              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
-                                <span>→</span> {displayName}
+                              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 shadow-lg leading-none">
+                                <span className="leading-none">→</span> <span className="leading-none">{displayName}</span>
                               </div>
                             </div>
 
                             {/* Secondary image */}
                             {displayImages[1] && (
-                              <div className="relative h-44 overflow-hidden">
+                              <div className="relative h-48 overflow-hidden">
                                 <img
                                   src={displayImages[1]}
                                   alt="Interior"
@@ -1103,8 +1053,8 @@ export function QuotePDFBuilderDialog({
                                 />
                                 {/* Passenger count badge */}
                                 {passengers && (
-                                  <div className="absolute bottom-3 right-3 bg-white/95 text-gray-700 text-xs px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
-                                    <span>👤</span> {passengers}
+                                  <div className="absolute top-3 right-3 bg-white/50 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1.5 rounded-full inline-flex items-center gap-1 shadow leading-none">
+                                    <User className="h-3 w-3 flex-shrink-0" /> <span className="leading-none">{passengers}</span>
                                   </div>
                                 )}
                               </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -34,6 +34,8 @@ import {
 import { Logo } from '@/components/logo'
 import { getQuoteByNumber, acceptQuote, declineQuote, QuoteWithItems, QuoteStatus } from '@/lib/actions/quotes'
 import { formatCurrency } from '@/lib/utils'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 
 const statusConfig: Record<QuoteStatus, { label: string; color: string; icon: any }> = {
   draft: { label: 'Draft', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: FileText },
@@ -55,6 +57,8 @@ export default function QuoteViewPage() {
   const [declineDialogOpen, setDeclineDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState<{ itemIndex: number; imageIndex: number } | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const pdfPreviewRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function loadQuote() {
@@ -120,25 +124,199 @@ export default function QuoteViewPage() {
     setDeclineDialogOpen(false)
   }
 
+  // Helper function to convert oklch/oklab colors to hex
+  const convertToHex = (color: string): string => {
+    if (color.startsWith('#')) return color
+    if (color.includes('oklch') || color.includes('oklab')) {
+      if (color.includes('0.985') || color.includes('0.99') || color.includes('0.98')) return '#ffffff'
+      if (color.includes('0.129') || color.includes('0.13') || color.includes('0.14')) return '#111827'
+      if (color.includes('0.967') || color.includes('0.97') || color.includes('0.96')) return '#f3f4f6'
+      if (color.includes('0.21') || color.includes('0.22') || color.includes('0.20')) return '#1f2937'
+      if (color.includes('0.37') || color.includes('0.38') || color.includes('0.36')) return '#374151'
+      if (color.includes('0.446') || color.includes('0.45') || color.includes('0.44')) return '#4b5563'
+      if (color.includes('0.556') || color.includes('0.55') || color.includes('0.56') || color.includes('0.54')) return '#6b7280'
+      if (color.includes('0.704') || color.includes('0.70') || color.includes('0.71')) return '#9ca3af'
+      if (color.includes('0.872') || color.includes('0.87') || color.includes('0.86')) return '#d1d5db'
+      if (color.includes('0.928') || color.includes('0.93') || color.includes('0.92')) return '#e5e7eb'
+      if (color.includes('0.588') && color.includes('250')) return '#3b82f6'
+      const match = color.match(/[\d.]+/)
+      if (match) {
+        const lightness = parseFloat(match[0])
+        if (lightness > 0.9) return '#ffffff'
+        if (lightness > 0.7) return '#d1d5db'
+        if (lightness > 0.5) return '#6b7280'
+        if (lightness > 0.3) return '#374151'
+        return '#111827'
+      }
+      return '#000000'
+    }
+    if (color.startsWith('rgba') || color.startsWith('rgb')) return color
+    if (color === 'transparent') return 'transparent'
+    return color
+  }
+
   const handleDownloadPDF = async () => {
-    if (!quote) return
+    if (!quote || !pdfPreviewRef.current) return
+
+    setIsDownloading(true)
 
     try {
-      // Use the new server-side PDF generation with customization support
-      const response = await fetch(`/api/quote-pdf/${quote.id}`)
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF')
+      const ticketElement = pdfPreviewRef.current.querySelector('.pdf-ticket') as HTMLElement
+
+      if (!ticketElement) {
+        throw new Error('Could not find ticket preview element')
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${quote.quote_number}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      // Wait for images to load
+      const images = ticketElement.querySelectorAll('img')
+      await Promise.all(
+        Array.from(images).map((img) => {
+          if (img.complete) return Promise.resolve()
+          return new Promise((resolve) => {
+            img.onload = resolve
+            img.onerror = resolve
+          })
+        })
+      )
+
+      // Store original styles to restore later
+      const originalStyles: Map<HTMLElement, string> = new Map()
+
+      // Apply inline hex colors to ALL elements
+      const allElements = ticketElement.querySelectorAll('*')
+      allElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          originalStyles.set(el, el.style.cssText)
+          const computed = window.getComputedStyle(el)
+          const bgColor = computed.backgroundColor
+          if (bgColor) el.style.backgroundColor = convertToHex(bgColor)
+          const textColor = computed.color
+          if (textColor) el.style.color = convertToHex(textColor)
+          const borderColor = computed.borderColor
+          if (borderColor) el.style.borderColor = convertToHex(borderColor)
+        }
+      })
+
+      originalStyles.set(ticketElement, ticketElement.style.cssText)
+      const rootComputed = window.getComputedStyle(ticketElement)
+      ticketElement.style.backgroundColor = convertToHex(rootComputed.backgroundColor)
+      ticketElement.style.color = convertToHex(rootComputed.color)
+
+      // Fix image containers
+      const imageContainers = ticketElement.querySelectorAll('.h-48')
+      imageContainers.forEach((container) => {
+        if (container instanceof HTMLElement) {
+          const rect = container.getBoundingClientRect()
+          originalStyles.set(container, container.style.cssText)
+          container.style.width = rect.width + 'px'
+          container.style.height = rect.height + 'px'
+          container.style.overflow = 'hidden'
+        }
+      })
+
+      // Fix all images
+      const allImgs = ticketElement.querySelectorAll('img')
+      allImgs.forEach((img) => {
+        if (img instanceof HTMLImageElement) {
+          const rect = img.getBoundingClientRect()
+          const computed = window.getComputedStyle(img)
+          originalStyles.set(img, img.style.cssText)
+
+          const isLogo = computed.objectFit === 'contain' || img.alt === 'Cadiz & Lluis'
+
+          if (isLogo) {
+            img.style.maxWidth = rect.width + 'px'
+            img.style.maxHeight = rect.height + 'px'
+            img.style.width = 'auto'
+            img.style.height = 'auto'
+            img.style.objectFit = 'contain'
+          } else {
+            const parent = img.parentElement
+            if (parent) {
+              const parentRect = parent.getBoundingClientRect()
+              const imgNaturalWidth = img.naturalWidth || rect.width
+              const imgNaturalHeight = img.naturalHeight || rect.height
+              const containerRatio = parentRect.width / parentRect.height
+              const imageRatio = imgNaturalWidth / imgNaturalHeight
+
+              if (imageRatio > containerRatio) {
+                const scaledWidth = parentRect.height * imageRatio
+                img.style.width = scaledWidth + 'px'
+                img.style.height = parentRect.height + 'px'
+                img.style.marginLeft = -((scaledWidth - parentRect.width) / 2) + 'px'
+                img.style.marginTop = '0'
+              } else {
+                const scaledHeight = parentRect.width / imageRatio
+                img.style.width = parentRect.width + 'px'
+                img.style.height = scaledHeight + 'px'
+                img.style.marginTop = -((scaledHeight - parentRect.height) / 2) + 'px'
+                img.style.marginLeft = '0'
+              }
+              img.style.objectFit = 'none'
+              img.style.maxWidth = 'none'
+              img.style.maxHeight = 'none'
+            }
+          }
+        }
+      })
+
+      // Fix badge alignment
+      const badges = ticketElement.querySelectorAll('.rounded-full')
+      badges.forEach((badge) => {
+        if (badge instanceof HTMLElement) {
+          originalStyles.set(badge, badge.style.cssText)
+
+          const spans = badge.querySelectorAll('span')
+          spans.forEach((span) => {
+            if (span instanceof HTMLElement) {
+              originalStyles.set(span, span.style.cssText)
+              span.style.position = 'relative'
+              span.style.top = '-5px'
+            }
+          })
+
+          const svgs = badge.querySelectorAll('svg')
+          svgs.forEach((svg) => {
+            if (svg instanceof SVGElement) {
+              const svgEl = svg as unknown as HTMLElement
+              originalStyles.set(svgEl, svgEl.style.cssText)
+              svg.style.position = 'relative'
+              svg.style.top = '0px'
+            }
+          })
+        }
+      })
+
+      // Capture with html2canvas
+      const canvas = await html2canvas(ticketElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        imageTimeout: 15000,
+      })
+
+      // Restore original styles
+      originalStyles.forEach((originalStyle, el) => {
+        el.style.cssText = originalStyle
+      })
+
+      // Create PDF
+      const imgWidth = canvas.width
+      const imgHeight = canvas.height
+      const pdfWidth = 106
+      const pdfHeight = (imgHeight / imgWidth) * pdfWidth
+
+      const pdf = new jsPDF({
+        orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [pdfWidth, pdfHeight],
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`${quote.quote_number}.pdf`)
 
       toast({
         title: 'PDF Downloaded',
@@ -151,6 +329,8 @@ export default function QuoteViewPage() {
         description: 'Failed to generate PDF. Please try again.',
         variant: 'destructive',
       })
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -214,10 +394,20 @@ export default function QuoteViewPage() {
               onClick={handleDownloadPDF}
               variant="outline"
               size="sm"
+              disabled={isDownloading}
               className="bg-white/10 text-white border-white/20 hover:bg-white/20"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
+              {isDownloading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -511,6 +701,141 @@ export default function QuoteViewPage() {
           </button>
         </div>
       )}
+
+      {/* Hidden PDF Preview for Download */}
+      <div ref={pdfPreviewRef} className="fixed left-[-9999px] top-0" style={{ width: '400px' }}>
+        <div className="pdf-ticket bg-white shadow-lg overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+          {/* Top Header with Logo - Navy Blue */}
+          <div className="bg-gray-900 px-5 py-4 flex items-center justify-between">
+            <img
+              src="/logo/CL White LOGO.png"
+              alt="Cadiz & Lluis"
+              className="h-10 w-auto object-contain"
+            />
+            <div className="text-right">
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">{quote.quote_number}</p>
+              <p className="text-[9px] text-white/50">
+                {new Date(quote.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
+
+          {/* Title Header - White Background */}
+          <div className="bg-white p-4 text-center border-b border-gray-100">
+            <h1 className="text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
+              {quote.pdf_customization?.header_title || 'Private Quotes'}
+            </h1>
+            {quote.pdf_customization?.header_subtitle && (
+              <p className="text-xs text-gray-500 mt-1">{quote.pdf_customization.header_subtitle}</p>
+            )}
+          </div>
+
+          {/* Client Info */}
+          <div className="bg-white px-5 pt-3 pb-6 border-b border-gray-100">
+            <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1">Prepared For</p>
+            <p className="text-sm font-semibold text-gray-900">{quote.client_name}</p>
+            <p className="text-xs text-gray-500">{quote.client_email}</p>
+          </div>
+
+          {/* Service Options - Ticket Style */}
+          {quote.service_items.map((item) => {
+            const override = quote.pdf_customization?.service_overrides?.[item.id]
+            const displayImages = override?.display_images?.slice(0, 2) || item.images?.slice(0, 2) || []
+            const displayName = override?.display_name || item.service_name
+            const details = override?.details || []
+
+            const dateDetail = details.find(d => d.label === 'Date')?.value || ''
+            const departureCode = details.find(d => d.label === 'Departure Code')?.value || 'TBD'
+            const departureDetail = details.find(d => d.label === 'Departure')?.value || ''
+            const arrivalCode = details.find(d => d.label === 'Arrival Code')?.value || 'TBD'
+            const arrivalDetail = details.find(d => d.label === 'Arrival')?.value || ''
+            const duration = details.find(d => d.label === 'Duration')?.value || ''
+            const passengers = details.find(d => d.label === 'Passengers')?.value || ''
+
+            return (
+              <div key={item.id} className="bg-white border-b-8 border-gray-100">
+                {displayImages.length > 0 && (
+                  <div className="relative">
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={displayImages[0]}
+                        alt="Main"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 shadow-lg leading-none">
+                        <span className="leading-none">→</span> <span className="leading-none">{displayName}</span>
+                      </div>
+                    </div>
+
+                    {displayImages[1] && (
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={displayImages[1]}
+                          alt="Interior"
+                          className="w-full h-full object-cover"
+                        />
+                        {passengers && (
+                          <div className="absolute top-3 right-3 bg-white/50 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1.5 rounded-full inline-flex items-center gap-1 shadow leading-none">
+                            <User className="h-3 w-3 flex-shrink-0" /> <span className="leading-none">{passengers}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="p-5 bg-white">
+                  {dateDetail && (
+                    <p className="text-sm text-gray-500 mb-4">{dateDetail}</p>
+                  )}
+
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="text-left">
+                      <p className="text-2xl font-bold text-gray-900">{departureCode}</p>
+                      <p className="text-xs text-blue-500">{departureDetail}</p>
+                    </div>
+
+                    <div className="flex-1 px-3">
+                      <div className="flex flex-col items-center">
+                        <p className="text-xs text-gray-400 mb-1">{duration || '---'}</p>
+                        <div className="flex items-center w-full">
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                          <div className="mx-2 text-gray-300">→</div>
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-gray-900">{arrivalCode}</p>
+                      <p className="text-xs text-blue-500">{arrivalDetail}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right pt-4 border-t border-gray-100">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(item.price)}
+                    </p>
+                    <p className="text-xs text-gray-400">Total</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Footer */}
+          <div className="p-5 bg-gray-900 text-center">
+            <p className="text-sm font-bold text-white tracking-widest mb-1">CADIZ & LLUIS</p>
+            <p className="text-[10px] text-white/60 tracking-wider uppercase mb-3">Luxury Living</p>
+            <p className="text-[10px] text-white/50">
+              Quote valid until {new Date(quote.expiration_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </p>
+            <p className="text-[10px] text-white/70 mt-1">
+              brody@cadizlluis.com • www.cadizlluis.com
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

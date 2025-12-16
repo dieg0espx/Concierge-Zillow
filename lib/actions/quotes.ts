@@ -207,6 +207,7 @@ export async function createQuote(data: {
     images?: string[]
   }>
   status?: QuoteStatus
+  pdf_customization?: PDFCustomization | null
 }) {
   const supabase = await createClient()
 
@@ -238,6 +239,7 @@ export async function createQuote(data: {
       subtotal: total,
       total: total,
       notes: data.notes || null,
+      pdf_customization: data.pdf_customization || null,
     })
     .select()
     .single()
@@ -255,14 +257,42 @@ export async function createQuote(data: {
     images: item.images || [],
   }))
 
-  const { error: itemsError } = await supabase
+  const { data: insertedItems, error: itemsError } = await supabase
     .from('quote_service_items')
     .insert(itemsToInsert)
+    .select()
 
   if (itemsError) {
     // Rollback quote creation
     await supabase.from('quotes').delete().eq('id', quote.id)
     return { error: itemsError.message }
+  }
+
+  // Update pdf_customization with actual service item IDs if provided
+  if (data.pdf_customization?.service_overrides && insertedItems) {
+    const indexBasedOverrides = data.pdf_customization.service_overrides
+    const updatedOverrides: { [serviceItemId: string]: ServiceOverride } = {}
+
+    // Map index-based overrides to actual service item IDs
+    Object.entries(indexBasedOverrides).forEach(([indexStr, override]) => {
+      const index = parseInt(indexStr, 10)
+      if (insertedItems[index]) {
+        updatedOverrides[insertedItems[index].id] = override
+      }
+    })
+
+    // Update quote with corrected pdf_customization
+    if (Object.keys(updatedOverrides).length > 0) {
+      await supabase
+        .from('quotes')
+        .update({
+          pdf_customization: {
+            ...data.pdf_customization,
+            service_overrides: updatedOverrides,
+          },
+        })
+        .eq('id', quote.id)
+    }
   }
 
   // Send email if status is 'sent'
@@ -294,6 +324,7 @@ export async function updateQuote(quoteId: string, data: {
     price: number
     images?: string[]
   }>
+  pdf_customization?: PDFCustomization | null
 }) {
   const supabase = await createClient()
 
@@ -318,7 +349,7 @@ export async function updateQuote(quoteId: string, data: {
     total += item.price
   })
 
-  // Update quote
+  // Update quote (without pdf_customization for now, will update after service items are created)
   const { error: updateError } = await supabase
     .from('quotes')
     .update({
@@ -351,12 +382,40 @@ export async function updateQuote(quoteId: string, data: {
     images: item.images || [],
   }))
 
-  const { error: itemsError } = await supabase
+  const { data: insertedItems, error: itemsError } = await supabase
     .from('quote_service_items')
     .insert(itemsToInsert)
+    .select()
 
   if (itemsError) {
     return { error: itemsError.message }
+  }
+
+  // Update pdf_customization with actual service item IDs if provided
+  if (data.pdf_customization && insertedItems) {
+    let finalPdfCustomization = { ...data.pdf_customization }
+
+    if (data.pdf_customization.service_overrides) {
+      const indexBasedOverrides = data.pdf_customization.service_overrides
+      const updatedOverrides: { [serviceItemId: string]: ServiceOverride } = {}
+
+      // Map index-based overrides to actual service item IDs
+      Object.entries(indexBasedOverrides).forEach(([indexStr, override]) => {
+        const index = parseInt(indexStr, 10)
+        if (insertedItems[index]) {
+          updatedOverrides[insertedItems[index].id] = override
+        }
+      })
+
+      finalPdfCustomization.service_overrides = updatedOverrides
+    }
+
+    await supabase
+      .from('quotes')
+      .update({
+        pdf_customization: finalPdfCustomization,
+      })
+      .eq('id', quoteId)
   }
 
   revalidatePath('/admin/quotes')

@@ -41,10 +41,9 @@ import {
   AlertCircle,
   Copy,
   Plane,
-  Download,
   Mail,
   Receipt,
-  Settings,
+  Pencil,
 } from 'lucide-react'
 import { Quote, QuoteStatus, QuoteWithItems, deleteQuote, sendQuote, duplicateQuote, emailQuotePDF, convertQuoteToInvoice } from '@/lib/actions/quotes'
 import { formatCurrency } from '@/lib/utils'
@@ -131,11 +130,6 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
     setIsSending(false)
     setSendDialogOpen(false)
     setSelectedQuote(null)
-  }
-
-  const handleDownloadPDF = async (quote: Quote) => {
-    // Open the PDF Builder dialog which has the proper html2canvas download
-    await handleOpenPdfBuilder(quote)
   }
 
   const handleOpenPdfBuilder = async (quote: Quote) => {
@@ -399,7 +393,7 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
                                 className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
                                 title="Customize PDF"
                               >
-                                <Settings className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
                               {quote.status === 'accepted' && !quote.converted_to_invoice_id && (
                                 <Button
@@ -427,15 +421,6 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
                                   </Button>
                                 </Link>
                               )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownloadPDF(quote)}
-                                className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                                title="Download PDF"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -588,7 +573,7 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
                           disabled={isLoadingQuoteData}
                           className="flex-1 text-cyan-400 border-cyan-400/30 hover:bg-cyan-500/10"
                         >
-                          <Settings className="h-4 w-4 mr-2" />
+                          <Pencil className="h-4 w-4 mr-2" />
                           Customize
                         </Button>
                         {quote.status === 'accepted' && !quote.converted_to_invoice_id && (
@@ -617,15 +602,6 @@ export function QuotesList({ quotes }: { quotes: Quote[] }) {
                             </Button>
                           </Link>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadPDF(quote)}
-                          className="flex-1 text-green-400 border-green-400/30 hover:bg-green-500/10"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          PDF
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

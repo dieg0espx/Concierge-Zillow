@@ -98,7 +98,8 @@ function CheckoutForm({
       <div className="bg-white/5 border border-white/20 rounded-lg p-4">
         <PaymentElement
           options={{
-            layout: 'tabs',
+            layout: 'accordion',
+            paymentMethodOrder: ['card'],
           }}
         />
       </div>
@@ -265,7 +266,7 @@ export default function PaymentPage() {
     appearance: {
       theme: 'night' as const,
       variables: {
-        colorPrimary: '#d4af37',
+        colorPrimary: '#ffffff',
         colorBackground: 'rgba(255, 255, 255, 0.05)',
         colorText: '#ffffff',
         colorDanger: '#ef4444',
@@ -280,19 +281,11 @@ export default function PaymentPage() {
           backgroundColor: 'rgba(255, 255, 255, 0.05)',
         },
         '.Input:focus': {
-          border: '1px solid #d4af37',
-          boxShadow: '0 0 0 1px #d4af37',
+          border: '1px solid #ffffff',
+          boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.3)',
         },
         '.Label': {
           color: 'rgba(255, 255, 255, 0.7)',
-        },
-        '.Tab': {
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        },
-        '.Tab--selected': {
-          border: '1px solid #d4af37',
-          backgroundColor: 'rgba(212, 175, 55, 0.1)',
         },
       },
     },

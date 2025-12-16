@@ -351,7 +351,7 @@ export function InvoicePDF({ invoice, companyInfo }: InvoicePDFProps) {
     name: companyInfo?.name || 'CADIZ & LLUIS',
     tagline: companyInfo?.tagline || 'LUXURY LIVING',
     phone: companyInfo?.phone || '+1 (555) 123-4567',
-    email: companyInfo?.email || 'concierge@cadizlluis.com',
+    email: companyInfo?.email || 'brody@cadizlluis.com',
     address: companyInfo?.address || 'Beverly Hills, CA 90210',
     website: companyInfo?.website || 'www.cadizlluis.com',
   }

@@ -186,8 +186,8 @@ export default async function HomePage() {
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors flex-shrink-0">
                       <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <a href="mailto:diego@comcreate.org" className="text-xs sm:text-sm break-all">
-                      diego@comcreate.org
+                    <a href="mailto:brody@cadizlluis.com" className="text-xs sm:text-sm break-all">
+                      brody@cadizlluis.com
                     </a>
                   </div>
                 </div>

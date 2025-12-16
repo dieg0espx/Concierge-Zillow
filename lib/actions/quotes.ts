@@ -33,10 +33,31 @@ export type Quote = {
   viewed_at: string | null
   responded_at: string | null
   converted_to_invoice_id: string | null
+  pdf_customization: PDFCustomization | null
 }
 
 export type QuoteWithItems = Quote & {
   service_items: QuoteServiceItem[]
+}
+
+// PDF Customization types for visual quote builder
+export type ServiceOverride = {
+  display_name?: string
+  display_description?: string
+  display_images?: string[]  // Selected images (max 2) from available images
+  details?: { label: string; value: string }[]  // e.g., Date, Departure, Arrival
+}
+
+export type PDFCustomization = {
+  header_title?: string
+  header_subtitle?: string
+  header_icon?: 'plane' | 'car' | 'yacht' | 'none'
+  service_overrides?: {
+    [serviceItemId: string]: ServiceOverride
+  }
+  custom_notes?: string
+  custom_terms?: string
+  accent_color?: string
 }
 
 // Generate unique quote number (e.g., QT-2024-001)
@@ -186,6 +207,7 @@ export async function createQuote(data: {
     images?: string[]
   }>
   status?: QuoteStatus
+  pdf_customization?: PDFCustomization | null
 }) {
   const supabase = await createClient()
 
@@ -217,6 +239,7 @@ export async function createQuote(data: {
       subtotal: total,
       total: total,
       notes: data.notes || null,
+      pdf_customization: data.pdf_customization || null,
     })
     .select()
     .single()
@@ -234,14 +257,42 @@ export async function createQuote(data: {
     images: item.images || [],
   }))
 
-  const { error: itemsError } = await supabase
+  const { data: insertedItems, error: itemsError } = await supabase
     .from('quote_service_items')
     .insert(itemsToInsert)
+    .select()
 
   if (itemsError) {
     // Rollback quote creation
     await supabase.from('quotes').delete().eq('id', quote.id)
     return { error: itemsError.message }
+  }
+
+  // Update pdf_customization with actual service item IDs if provided
+  if (data.pdf_customization?.service_overrides && insertedItems) {
+    const indexBasedOverrides = data.pdf_customization.service_overrides
+    const updatedOverrides: { [serviceItemId: string]: ServiceOverride } = {}
+
+    // Map index-based overrides to actual service item IDs
+    Object.entries(indexBasedOverrides).forEach(([indexStr, override]) => {
+      const index = parseInt(indexStr, 10)
+      if (insertedItems[index]) {
+        updatedOverrides[insertedItems[index].id] = override
+      }
+    })
+
+    // Update quote with corrected pdf_customization
+    if (Object.keys(updatedOverrides).length > 0) {
+      await supabase
+        .from('quotes')
+        .update({
+          pdf_customization: {
+            ...data.pdf_customization,
+            service_overrides: updatedOverrides,
+          },
+        })
+        .eq('id', quote.id)
+    }
   }
 
   // Send email if status is 'sent'
@@ -273,6 +324,7 @@ export async function updateQuote(quoteId: string, data: {
     price: number
     images?: string[]
   }>
+  pdf_customization?: PDFCustomization | null
 }) {
   const supabase = await createClient()
 
@@ -297,7 +349,7 @@ export async function updateQuote(quoteId: string, data: {
     total += item.price
   })
 
-  // Update quote
+  // Update quote (without pdf_customization for now, will update after service items are created)
   const { error: updateError } = await supabase
     .from('quotes')
     .update({
@@ -330,12 +382,40 @@ export async function updateQuote(quoteId: string, data: {
     images: item.images || [],
   }))
 
-  const { error: itemsError } = await supabase
+  const { data: insertedItems, error: itemsError } = await supabase
     .from('quote_service_items')
     .insert(itemsToInsert)
+    .select()
 
   if (itemsError) {
     return { error: itemsError.message }
+  }
+
+  // Update pdf_customization with actual service item IDs if provided
+  if (data.pdf_customization && insertedItems) {
+    let finalPdfCustomization = { ...data.pdf_customization }
+
+    if (data.pdf_customization.service_overrides) {
+      const indexBasedOverrides = data.pdf_customization.service_overrides
+      const updatedOverrides: { [serviceItemId: string]: ServiceOverride } = {}
+
+      // Map index-based overrides to actual service item IDs
+      Object.entries(indexBasedOverrides).forEach(([indexStr, override]) => {
+        const index = parseInt(indexStr, 10)
+        if (insertedItems[index]) {
+          updatedOverrides[insertedItems[index].id] = override
+        }
+      })
+
+      finalPdfCustomization.service_overrides = updatedOverrides
+    }
+
+    await supabase
+      .from('quotes')
+      .update({
+        pdf_customization: finalPdfCustomization,
+      })
+      .eq('id', quoteId)
   }
 
   revalidatePath('/admin/quotes')
@@ -402,6 +482,44 @@ export async function sendQuote(quoteId: string) {
 
   revalidatePath('/admin/quotes')
   return { success: true }
+}
+
+// Update quote PDF customization
+export async function updateQuotePDFCustomization(quoteId: string, customization: PDFCustomization) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('quotes')
+    .update({
+      pdf_customization: customization,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', quoteId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/quotes')
+  revalidatePath(`/admin/quotes/${quoteId}/edit`)
+  return { success: true }
+}
+
+// Get quote PDF customization
+export async function getQuotePDFCustomization(quoteId: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('quotes')
+    .select('pdf_customization')
+    .eq('id', quoteId)
+    .single()
+
+  if (error) {
+    return { error: error.message, data: null }
+  }
+
+  return { data: data?.pdf_customization as PDFCustomization | null }
 }
 
 // Duplicate quote
@@ -763,7 +881,7 @@ export async function emailQuotePDF(quoteId: string) {
             <div class="footer">
               <p class="footer-brand">Cadiz & Lluis · Luxury Living</p>
               <p class="footer-text">
-                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}<br>
+                ${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}<br>
                 For any inquiries, please contact us at the email above.
               </p>
             </div>
@@ -795,7 +913,7 @@ This quote is valid until ${formatDate(quote.expiration_date)}.
 Best regards,
 The Cadiz & Lluis Team
 
-${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}
     `,
   }
 
@@ -1000,22 +1118,37 @@ async function sendQuoteEmail(data: {
       <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .logo { font-size: 28px; font-weight: bold; letter-spacing: 3px; margin-bottom: 5px; }
-            .tagline { font-size: 12px; letter-spacing: 4px; color: #c9a227; text-transform: uppercase; }
-            .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e0e0e0; border-top: none; }
-            .detail-box { background: #f8f9fa; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #c9a227; }
-            .detail-row { padding: 8px 0; font-size: 15px; color: #333; line-height: 1.8; }
-            .detail-row .label { font-weight: 600; color: #666; }
-            .detail-row .value { font-weight: 500; color: #1a1a2e; }
-            .detail-row.total { padding-top: 15px; margin-top: 10px; border-top: 2px solid #1a1a2e; font-size: 18px; }
-            .detail-row.total .value { font-weight: bold; font-size: 20px; color: #1a1a2e; }
-            .button { display: inline-block; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white !important; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
-            .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none; }
-            .footer-text { font-size: 12px; color: #666; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #ffffff; margin: 0; padding: 0; background-color: #000000; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #0a0a0a; }
+            .header { background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%); color: white; padding: 50px 40px; text-align: center; border-bottom: 1px solid #1f1f1f; }
+            .logo { font-size: 32px; font-weight: 800; letter-spacing: 6px; margin-bottom: 8px; color: #ffffff; text-transform: uppercase; }
+            .tagline { font-size: 13px; letter-spacing: 5px; color: #d9d9d9; text-transform: uppercase; font-weight: 600; }
+            .badge { display: inline-block; background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%); color: #000000; padding: 10px 24px; border-radius: 6px; font-size: 13px; font-weight: 700; letter-spacing: 2px; margin-top: 20px; text-transform: uppercase; }
+            .content { background: #0a0a0a; padding: 45px 40px; }
+            .greeting { font-size: 16px; color: #ffffff; margin-bottom: 24px; }
+            .greeting strong { color: #ffffff; }
+            .detail-box { background: linear-gradient(135deg, #0F1D33 0%, #081421 100%); padding: 28px; border-radius: 12px; margin: 30px 0; border: 1px solid #1f1f1f; }
+            .detail-row { padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+            .detail-row:last-child { border-bottom: none; }
+            .detail-row .label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #b3b3b3; margin-bottom: 6px; }
+            .detail-row .value { font-size: 16px; font-weight: 600; color: #ffffff; }
+            .detail-row.total { padding-top: 18px; margin-top: 12px; border-top: 2px solid #ffffff; border-bottom: none; }
+            .detail-row.total .label { color: #b3b3b3; }
+            .detail-row.total .value { font-weight: 800; font-size: 22px; color: #ffffff; }
+            .cta-container { text-align: center; margin: 35px 0; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%); color: #000000 !important; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-weight: 700; letter-spacing: 1.5px; font-size: 14px; text-transform: uppercase; box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2); }
+            .info-text { font-size: 14px; color: #b3b3b3; line-height: 1.7; margin: 25px 0; }
+            .closing { margin-top: 40px; font-size: 15px; color: #ffffff; }
+            .footer { background: #000000; padding: 30px 40px; text-align: center; border-top: 1px solid #1f1f1f; }
+            .footer-text { font-size: 13px; color: #b3b3b3; line-height: 1.8; }
+            .footer-brand { font-weight: 700; color: #ffffff; font-size: 14px; margin-bottom: 4px; letter-spacing: 2px; }
+            @media only screen and (max-width: 600px) {
+              .content, .footer { padding: 30px 20px !important; }
+              .header { padding: 40px 20px !important; }
+              .logo { font-size: 24px !important; }
+            }
           </style>
         </head>
         <body>
@@ -1023,37 +1156,46 @@ async function sendQuoteEmail(data: {
             <div class="header">
               <div class="logo">CADIZ & LLUIS</div>
               <div class="tagline">Luxury Living</div>
+              <div class="badge">New Quote</div>
             </div>
             <div class="content">
-              <p>Dear ${data.clientName},</p>
-              <p>You have received a new quote from <strong>${data.managerName}</strong>.</p>
+              <p class="greeting">Dear <strong>${data.clientName}</strong>,</p>
+              <p class="greeting">You have received a new quote from <strong>${data.managerName}</strong>. Please review the details below:</p>
 
               <div class="detail-box">
                 <div class="detail-row">
-                  <span class="label">Quote Number:</span> <span class="value">${data.quoteNumber}</span>
+                  <div class="label">Quote Number</div>
+                  <div class="value">${data.quoteNumber}</div>
                 </div>
                 <div class="detail-row">
-                  <span class="label">Valid Until:</span> <span class="value">${formatDate(data.expirationDate)}</span>
+                  <div class="label">Valid Until</div>
+                  <div class="value">${formatDate(data.expirationDate)}</div>
                 </div>
                 <div class="detail-row total">
-                  <span class="label">Total Amount:</span> <span class="value">${formatCurrency(data.total)}</span>
+                  <div class="label">Total Amount</div>
+                  <div class="value">${formatCurrency(data.total)}</div>
                 </div>
               </div>
 
-              <div style="text-align: center;">
-                <a href="${quoteUrl}" class="button">View Quote</a>
+              <div class="cta-container">
+                <a href="${quoteUrl}" class="cta-button">View Quote</a>
               </div>
 
-              <p style="font-size: 14px; color: #666; margin-top: 30px;">
+              <p class="info-text">
                 Click the button above to review your quote and accept or decline.
+                If you have any questions, please feel free to contact us.
               </p>
 
-              <p style="margin-top: 30px;">Best regards,<br><strong>${data.managerName}</strong></p>
+              <p class="closing">
+                Best regards,<br>
+                <strong>${data.managerName}</strong>
+              </p>
             </div>
             <div class="footer">
+              <p class="footer-brand">Cadiz & Lluis · Luxury Living</p>
               <p class="footer-text">
-                <strong>Cadiz & Lluis - Luxury Living</strong><br>
-                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+                ${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}<br>
+                For any inquiries, please contact us at the email above.
               </p>
             </div>
           </div>
@@ -1078,7 +1220,7 @@ Best regards,
 ${data.managerName}
 
 Cadiz & Lluis - Luxury Living
-${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}
     `,
   }
 

@@ -262,6 +262,9 @@ export async function createInvoice(data: {
       clientEmail: data.client_email,
       invoiceNumber: invoiceNumber,
       dueDate: data.due_date,
+      subtotal,
+      taxRate,
+      taxAmount,
       total,
       managerName: managerProfile.name,
     }).catch(err => console.error('Failed to send invoice email:', err))
@@ -381,6 +384,9 @@ export async function updateInvoice(invoiceId: string, data: {
       clientEmail: data.client_email,
       invoiceNumber: existingInvoice.invoice_number,
       dueDate: data.due_date,
+      subtotal,
+      taxRate,
+      taxAmount,
       total,
       managerName: managerProfile.name,
     }).catch(err => console.error('Failed to send invoice email:', err))
@@ -470,6 +476,9 @@ export async function sendInvoice(invoiceId: string) {
     clientEmail: invoice.client_email,
     invoiceNumber: invoice.invoice_number,
     dueDate: invoice.due_date,
+    subtotal: invoice.subtotal,
+    taxRate: invoice.tax_rate || 0,
+    taxAmount: invoice.tax_amount || 0,
     total: invoice.total,
     managerName: managerProfile.name,
   }).catch(err => console.error('Failed to send invoice email:', err))
@@ -566,6 +575,9 @@ export async function processPayment(invoiceNumber: string, paymentDetails: {
     clientName: invoice.client_name,
     clientEmail: invoice.client_email,
     invoiceNumber: invoice.invoice_number,
+    subtotal: invoice.subtotal,
+    taxRate: invoice.tax_rate || 0,
+    taxAmount: invoice.tax_amount || 0,
     total: invoice.total,
     paidAt,
   }).catch(err => console.error('Failed to send confirmation email:', err))
@@ -578,6 +590,9 @@ async function sendPaymentConfirmationEmail(data: {
   clientName: string
   clientEmail: string
   invoiceNumber: string
+  subtotal: number
+  taxRate: number
+  taxAmount: number
   total: number
   paidAt: string
 }) {
@@ -675,6 +690,16 @@ async function sendPaymentConfirmationEmail(data: {
                   <div class="label">Payment Date</div>
                   <div class="value">${formatDate(data.paidAt)}</div>
                 </div>
+                <div class="detail-row">
+                  <div class="label">Subtotal</div>
+                  <div class="value">${formatCurrency(data.subtotal)}</div>
+                </div>
+                ${data.taxRate > 0 ? `
+                <div class="detail-row">
+                  <div class="label">Tax (${data.taxRate}%)</div>
+                  <div class="value">${formatCurrency(data.taxAmount)}</div>
+                </div>
+                ` : ''}
                 <div class="detail-row total">
                   <div class="label">Amount Paid</div>
                   <div class="value">${formatCurrency(data.total)}</div>
@@ -698,7 +723,7 @@ async function sendPaymentConfirmationEmail(data: {
             <div class="footer">
               <p class="footer-brand">Cadiz & Lluis · Luxury Living</p>
               <p class="footer-text">
-                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}<br>
+                ${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}<br>
                 For any inquiries, please contact us at the email above.
               </p>
             </div>
@@ -715,6 +740,8 @@ Thank you for your payment. This email confirms that we have received your payme
 
 Invoice Number: ${data.invoiceNumber}
 Payment Date: ${formatDate(data.paidAt)}
+Subtotal: ${formatCurrency(data.subtotal)}${data.taxRate > 0 ? `
+Tax (${data.taxRate}%): ${formatCurrency(data.taxAmount)}` : ''}
 Amount Paid: ${formatCurrency(data.total)}
 
 If you have any questions about this payment, please don't hesitate to contact us.
@@ -723,7 +750,7 @@ Best regards,
 The Cadiz & Lluis Team
 
 Cadiz & Lluis - Luxury Living
-${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}
     `,
   }
 
@@ -736,6 +763,9 @@ async function sendInvoiceEmail(data: {
   clientEmail: string
   invoiceNumber: string
   dueDate: string
+  subtotal: number
+  taxRate: number
+  taxAmount: number
   total: number
   managerName: string
 }) {
@@ -830,6 +860,16 @@ async function sendInvoiceEmail(data: {
                   <div class="label">Due Date</div>
                   <div class="value">${formatDate(data.dueDate)}</div>
                 </div>
+                <div class="detail-row">
+                  <div class="label">Subtotal</div>
+                  <div class="value">${formatCurrency(data.subtotal)}</div>
+                </div>
+                ${data.taxRate > 0 ? `
+                <div class="detail-row">
+                  <div class="label">Tax (${data.taxRate}%)</div>
+                  <div class="value">${formatCurrency(data.taxAmount)}</div>
+                </div>
+                ` : ''}
                 <div class="detail-row total">
                   <div class="label">Total Amount</div>
                   <div class="value">${formatCurrency(data.total)}</div>
@@ -853,7 +893,7 @@ async function sendInvoiceEmail(data: {
             <div class="footer">
               <p class="footer-brand">Cadiz & Lluis · Luxury Living</p>
               <p class="footer-text">
-                ${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}<br>
+                ${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}<br>
                 For any inquiries, please contact us at the email above.
               </p>
             </div>
@@ -870,6 +910,8 @@ You have received a new invoice from ${data.managerName}.
 
 Invoice Number: ${data.invoiceNumber}
 Due Date: ${formatDate(data.dueDate)}
+Subtotal: ${formatCurrency(data.subtotal)}${data.taxRate > 0 ? `
+Tax (${data.taxRate}%): ${formatCurrency(data.taxAmount)}` : ''}
 Total Amount: ${formatCurrency(data.total)}
 
 To view and pay your invoice, please visit:
@@ -879,7 +921,7 @@ Best regards,
 ${data.managerName}
 
 Cadiz & Lluis - Luxury Living
-${process.env.CONTACT_EMAIL || 'concierge@cadizlluis.com'}
+${process.env.CONTACT_EMAIL || 'brody@cadizlluis.com'}
     `,
   }
 

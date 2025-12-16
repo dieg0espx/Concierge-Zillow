@@ -7,17 +7,13 @@ const __dirname = dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbo: {
-      root: process.cwd(),
-    },
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
   },
+  swcMinify: false,
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(process.cwd())
     return config

@@ -14,13 +14,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create a PaymentIntent with the order amount and currency
+    // Create a PaymentIntent with the order amount and currency (card only)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      payment_method_types: ['card'],
       metadata: {
         invoiceNumber,
         clientEmail,

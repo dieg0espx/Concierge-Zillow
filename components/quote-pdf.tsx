@@ -201,13 +201,13 @@ const styles = StyleSheet.create({
   serviceImages: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
   },
   serviceImage: {
     width: 120,
     height: 80,
-    objectFit: 'cover',
     borderRadius: 4,
+    marginRight: 8,
+    marginBottom: 8,
   },
   // Totals
   totalsSection: {
@@ -422,7 +422,7 @@ export function QuotePDF({ quote, companyInfo }: QuotePDFProps) {
     name: companyInfo?.name || 'CADIZ & LLUIS',
     tagline: companyInfo?.tagline || 'LUXURY LIVING',
     phone: companyInfo?.phone || '+1 (555) 123-4567',
-    email: companyInfo?.email || 'concierge@cadizlluis.com',
+    email: companyInfo?.email || 'brody@cadizlluis.com',
     address: companyInfo?.address || 'Beverly Hills, CA 90210',
     website: companyInfo?.website || 'www.cadizlluis.com',
   }

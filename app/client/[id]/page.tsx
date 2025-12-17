@@ -47,12 +47,14 @@ export default async function ClientPublicPage({
     .from('client_property_assignments')
     .select(`
       property_id,
+      position,
       show_monthly_rent_to_client,
       show_nightly_rate_to_client,
       show_purchase_price_to_client,
       properties(*)
     `)
     .eq('client_id', client.id)
+    .order('position', { ascending: true, nullsFirst: false })
 
   // Merge assignment pricing options with property data
   // Override property's show_* fields based on client-specific settings
@@ -199,11 +201,21 @@ export default async function ClientPublicPage({
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: client } = await supabase
+
+  // Check if id is a UUID or a slug
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
+  const query = supabase
     .from('clients')
     .select('name, property_managers(name)')
-    .eq('id', id)
-    .single()
+
+  if (isUUID) {
+    query.eq('id', id)
+  } else {
+    query.eq('slug', id)
+  }
+
+  const { data: client } = await query.single()
 
   if (!client) {
     return {
@@ -215,7 +227,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const manager = client.property_managers as any
 
   return {
-    title: `${client.name}'s Properties - Curated by ${manager.name}`,
-    description: `Exclusive property portfolio curated for ${client.name} by ${manager.name}`,
+    title: `${client.name}'s Properties - Curated by ${manager?.name || 'Your Agent'}`,
+    description: `Exclusive property portfolio curated for ${client.name} by ${manager?.name || 'your agent'}`,
   }
 }

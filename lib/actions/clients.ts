@@ -807,7 +807,7 @@ export async function bulkAssignPropertiesToClient(
     .order('position', { ascending: false })
     .limit(1)
 
-  const startPosition = currentAssignments && currentAssignments[0]?.position !== null
+  const startPosition = currentAssignments && currentAssignments.length > 0 && currentAssignments[0].position !== null
     ? currentAssignments[0].position + 1
     : 0
 

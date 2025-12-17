@@ -316,11 +316,11 @@ export default function QuoteViewPage() {
         }
       })
 
-      // Fix passenger count badge text - move up additional 8px
+      // Fix passenger count badge text
       const passengerCountElements = ticketElement.querySelectorAll('.passenger-count')
       passengerCountElements.forEach((el) => {
         if (el instanceof HTMLElement) {
-          el.style.top = '-12px'
+          el.style.top = '-6px'
         }
       })
 

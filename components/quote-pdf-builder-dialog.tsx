@@ -412,7 +412,7 @@ export function QuotePDFBuilderDialog({
       const displayNameElements = ticketElement.querySelectorAll('.display-name')
       displayNameElements.forEach((el) => {
         if (el instanceof HTMLElement) {
-          el.style.top = '-6px'
+          el.style.top = '-8px'
         }
       })
 
@@ -420,7 +420,7 @@ export function QuotePDFBuilderDialog({
       const displayNameArrowElements = ticketElement.querySelectorAll('.display-name-arrow')
       displayNameArrowElements.forEach((el) => {
         if (el instanceof HTMLElement) {
-          el.style.top = '-6px'
+          el.style.top = '-8px'
         }
       })
 

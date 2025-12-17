@@ -333,7 +333,7 @@ export default function QuoteViewPage() {
       const displayNameElements = ticketElement.querySelectorAll('.display-name')
       displayNameElements.forEach((el) => {
         if (el instanceof HTMLElement) {
-          el.style.top = '-6px'
+          el.style.top = '-8px'
         }
       })
 
@@ -341,7 +341,7 @@ export default function QuoteViewPage() {
       const displayNameArrowElements = ticketElement.querySelectorAll('.display-name-arrow')
       displayNameArrowElements.forEach((el) => {
         if (el instanceof HTMLElement) {
-          el.style.top = '-6px'
+          el.style.top = '-8px'
         }
       })
 

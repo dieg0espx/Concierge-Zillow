@@ -114,39 +114,37 @@ export default async function ClientPublicPage({
       {/* Manager Contact Info */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         {manager && (manager.email || manager.phone) && (
-          <Card className="mb-6 sm:mb-10 glass-card animate-fade-in">
-            <CardContent className="p-5 sm:p-8">
-              <h2 className="luxury-heading text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-white tracking-[0.15em] sm:tracking-[0.2em]">Contact Information</h2>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
-                {manager.email && (
-                  <a href={`mailto:${manager.email}`} className="flex items-center gap-3 group">
-                    <div className="p-2.5 sm:p-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 group-hover:bg-white/15 transition-all">
-                      <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-white/90" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/70 uppercase tracking-[0.15em] mb-0.5">Email</p>
-                      <span className="text-white text-sm sm:text-base hover:text-white/90 transition-colors font-medium">
-                        {manager.email}
-                      </span>
-                    </div>
-                  </a>
-                )}
-                {manager.phone && (
-                  <a href={`tel:${manager.phone}`} className="flex items-center gap-3 group">
-                    <div className="p-2.5 sm:p-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 group-hover:bg-white/15 transition-all">
-                      <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-white/90" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/70 uppercase tracking-[0.15em] mb-0.5">Phone</p>
-                      <span className="text-white text-sm sm:text-base hover:text-white/90 transition-colors font-medium">
-                        {formatPhoneNumber(manager.phone)}
-                      </span>
-                    </div>
-                  </a>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-6 sm:mb-10 rounded-xl border border-white/20 bg-black/50 p-5 sm:p-8">
+            <h2 className="luxury-heading text-xl sm:text-2xl font-semibold mb-4 sm:mb-6 text-white tracking-[0.15em] sm:tracking-[0.2em]">Contact Information</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+              {manager.email && (
+                <a href={`mailto:${manager.email}`} className="flex items-center gap-3">
+                  <div className="p-2.5 sm:p-3 rounded-full bg-white/10 border border-white/20">
+                    <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70 uppercase tracking-[0.15em] mb-0.5">Email</p>
+                    <span className="text-white text-sm sm:text-base font-medium">
+                      {manager.email}
+                    </span>
+                  </div>
+                </a>
+              )}
+              {manager.phone && (
+                <a href={`tel:${manager.phone}`} className="flex items-center gap-3">
+                  <div className="p-2.5 sm:p-3 rounded-full bg-white/10 border border-white/20">
+                    <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70 uppercase tracking-[0.15em] mb-0.5">Phone</p>
+                    <span className="text-white text-sm sm:text-base font-medium">
+                      {formatPhoneNumber(manager.phone)}
+                    </span>
+                  </div>
+                </a>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Properties List */}

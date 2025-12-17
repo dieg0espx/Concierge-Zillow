@@ -337,6 +337,14 @@ export default function QuoteViewPage() {
         }
       })
 
+      // Fix display name arrow icon
+      const displayNameArrowElements = ticketElement.querySelectorAll('.display-name-arrow')
+      displayNameArrowElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.top = '-6px'
+        }
+      })
+
       // Capture with html2canvas
       const canvas = await html2canvas(ticketElement, {
         backgroundColor: '#ffffff',
@@ -1000,7 +1008,7 @@ export default function QuoteViewPage() {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-3 left-3 bg-black/20 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 shadow-lg leading-none">
-                        <span className="leading-none">→</span> <span className="leading-none display-name">{displayName}</span>
+                        <span className="leading-none display-name-arrow">→</span> <span className="leading-none display-name">{displayName}</span>
                       </div>
                     </div>
 

@@ -159,9 +159,38 @@ export default async function AdminClientPage({
                       <span className="tracking-wide">{formatPhoneNumber(client.phone)}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-white/60 text-sm">Managed by:</span>
-                    <span className="text-white font-medium">{manager.name}</span>
+                </div>
+
+                {/* Manager Contact Information */}
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <h3 className="text-white/60 text-sm uppercase tracking-widest mb-4">Manager Contact</h3>
+                  <div className="flex flex-col gap-3 text-white/80">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/10 rounded-lg">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-white font-medium tracking-wide">{manager.name}</span>
+                    </div>
+                    {manager.email && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/10 rounded-lg">
+                          <Mail className="h-4 w-4 text-white" />
+                        </div>
+                        <a href={`mailto:${manager.email}`} className="tracking-wide hover:text-white transition-colors">
+                          {manager.email}
+                        </a>
+                      </div>
+                    )}
+                    {manager.phone && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/10 rounded-lg">
+                          <Phone className="h-4 w-4 text-white" />
+                        </div>
+                        <a href={`tel:${manager.phone}`} className="tracking-wide hover:text-white transition-colors">
+                          {formatPhoneNumber(manager.phone)}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

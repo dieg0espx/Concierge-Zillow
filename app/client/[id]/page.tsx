@@ -42,6 +42,11 @@ export default async function ClientPublicPage({
 
   const manager = client.property_managers as any
 
+  // If no manager is associated, return not found
+  if (!manager) {
+    notFound()
+  }
+
   // Fetch properties assigned to this client (with client-specific pricing visibility)
   const { data: assignments, error: assignmentsError } = await supabase
     .from('client_property_assignments')

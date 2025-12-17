@@ -112,11 +112,13 @@ export default function PropertyListingPage() {
           }
 
           // Fetch the client's manager (explicitly include phone)
-          const { data: clientData } = await supabase
+          const { data: clientData, error: clientError } = await supabase
             .from('clients')
-            .select('property_managers(id, name, email, phone, profile_picture_url)')
+            .select('manager_id, property_managers(id, name, email, phone, profile_picture_url)')
             .eq('id', clientId)
             .single()
+
+          console.log('Client data:', clientData, 'Error:', clientError)
 
           if (clientData?.property_managers) {
             clientManager = clientData.property_managers as any

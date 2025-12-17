@@ -91,9 +91,12 @@ export default function PropertyListingPage() {
         let showNightlyRate = (data as any).show_nightly_rate || false
         let showPurchasePrice = (data as any).show_purchase_price || false
 
-        // If client ID is provided, fetch client-specific pricing visibility
+        // If client ID is provided, fetch client-specific pricing visibility and client's manager
+        let clientManager: PropertyManager | null = null
         if (clientId) {
           const supabase = createClient()
+
+          // Fetch assignment pricing settings
           const { data: assignment } = await supabase
             .from('client_property_assignments')
             .select('show_monthly_rent_to_client, show_nightly_rate_to_client, show_purchase_price_to_client')
@@ -106,6 +109,17 @@ export default function PropertyListingPage() {
             showMonthlyRent = showMonthlyRent && (assignment.show_monthly_rent_to_client ?? true)
             showNightlyRate = showNightlyRate && (assignment.show_nightly_rate_to_client ?? true)
             showPurchasePrice = showPurchasePrice && (assignment.show_purchase_price_to_client ?? true)
+          }
+
+          // Fetch the client's manager
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('property_managers(*)')
+            .eq('id', clientId)
+            .single()
+
+          if (clientData?.property_managers) {
+            clientManager = clientData.property_managers as any
           }
         }
 
@@ -120,7 +134,8 @@ export default function PropertyListingPage() {
           description: data.description || null,
           scraped_at: data.scraped_at,
           created_at: data.created_at,
-          managers: (data as any).managers || [],
+          // Use client's manager if available, otherwise fall back to property's managers
+          managers: clientManager ? [clientManager] : ((data as any).managers || []),
           // Pricing display options (with client-specific overrides applied)
           show_monthly_rent: showMonthlyRent,
           custom_monthly_rent: (data as any).custom_monthly_rent || null,

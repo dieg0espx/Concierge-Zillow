@@ -400,11 +400,11 @@ export function QuotePDFBuilderDialog({
         }
       })
 
-      // Fix passenger count badge text - move up additional 4px
+      // Fix passenger count badge text - move up additional 8px
       const passengerCountElements = ticketElement.querySelectorAll('.passenger-count')
       passengerCountElements.forEach((el) => {
         if (el instanceof HTMLElement) {
-          el.style.top = '-8px'
+          el.style.top = '-12px'
         }
       })
 

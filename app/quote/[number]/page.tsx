@@ -316,6 +316,14 @@ export default function QuoteViewPage() {
         }
       })
 
+      // Fix passenger count badge text - move up additional 8px
+      const passengerCountElements = ticketElement.querySelectorAll('.passenger-count')
+      passengerCountElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.top = '-12px'
+        }
+      })
+
       // Capture with html2canvas
       const canvas = await html2canvas(ticketElement, {
         backgroundColor: '#ffffff',
@@ -841,7 +849,7 @@ export default function QuoteViewPage() {
                         />
                         {guestCount && (
                           <div className="absolute top-3 right-3 bg-white/30 backdrop-blur-sm text-gray-700 text-xs px-2.5 py-1.5 rounded-full inline-flex items-center gap-1 shadow leading-none">
-                            <User className="h-3 w-3 flex-shrink-0" /> <span className="leading-none" style={{ position: 'relative', top: '-4px' }}>{guestCount}</span>
+                            <User className="h-3 w-3 flex-shrink-0" /> <span className="leading-none passenger-count">{guestCount}</span>
                           </div>
                         )}
                       </div>

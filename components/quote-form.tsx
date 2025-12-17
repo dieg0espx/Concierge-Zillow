@@ -381,7 +381,7 @@ export function QuoteForm({ quote, mode }: QuoteFormProps) {
 
   const serviceSuggestions = [
     { icon: Car, name: 'Exotic Car Rental', desc: 'Luxury vehicle rental' },
-    { icon: Plane, name: 'Private Jet Charter', desc: 'Private aviation service' },
+    { icon: Plane, name: 'Private Jet Charter', desc: '' },
     { icon: Ship, name: 'Yacht Charter', desc: 'Luxury yacht rental' },
   ]
 

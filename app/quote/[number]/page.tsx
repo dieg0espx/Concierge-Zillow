@@ -30,6 +30,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Plane,
+  Ship,
+  Car,
+  MapPin,
+  Users,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { getQuoteByNumber, acceptQuote, declineQuote, QuoteWithItems, QuoteStatus } from '@/lib/actions/quotes'
@@ -515,50 +520,201 @@ export default function QuoteViewPage() {
 
         {/* Service Items */}
         <div className="space-y-6 mb-8">
-          {quote.service_items.map((item, itemIndex) => (
-            <Card key={item.id} className="glass-card-accent elevated-card border border-white/20 overflow-hidden">
-              <CardContent className="p-0">
-                {/* Item Images */}
-                {item.images && item.images.length > 0 && (
-                  <div className="relative">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
-                      {item.images.slice(0, 4).map((imageUrl, imgIndex) => (
-                        <div
-                          key={imgIndex}
-                          className="aspect-[4/3] cursor-pointer relative overflow-hidden"
-                          onClick={() => setSelectedImageIndex({ itemIndex, imageIndex: imgIndex })}
-                        >
-                          <img
-                            src={imageUrl}
-                            alt={`${item.service_name} photo ${imgIndex + 1}`}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                          />
-                          {imgIndex === 3 && item.images.length > 4 && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                              <span className="text-white text-lg font-semibold">+{item.images.length - 4}</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {quote.service_items.map((item, itemIndex) => {
+            const override = quote.pdf_customization?.service_overrides?.[item.id]
+            const details = override?.details || []
+            const headerIcon = quote.pdf_customization?.header_icon || 'plane'
+            const displayName = override?.display_name || item.service_name
+            const displayDescription = override?.display_description || item.description || ''
 
-                {/* Item Details */}
-                <div className="p-6">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-white mb-2">{item.service_name}</h3>
-                      {item.description && (
-                        <p className="text-white/70 whitespace-pre-wrap">{item.description}</p>
-                      )}
+            // Extract common details
+            const dateDetail = details.find(d => d.label === 'Date')?.value || ''
+            const departureCode = details.find(d => d.label === 'Departure Code')?.value || ''
+            const departureDetail = details.find(d => d.label === 'Departure')?.value || ''
+            const arrivalCode = details.find(d => d.label === 'Arrival Code')?.value || ''
+            const arrivalDetail = details.find(d => d.label === 'Arrival')?.value || ''
+            const duration = details.find(d => d.label === 'Duration')?.value || ''
+            const passengers = details.find(d => d.label === 'Passengers')?.value || ''
+            const departureMarina = details.find(d => d.label === 'Departure Marina')?.value || ''
+            const destination = details.find(d => d.label === 'Destination')?.value || ''
+            const guests = details.find(d => d.label === 'Guests')?.value || ''
+            const pickup = details.find(d => d.label === 'Pickup')?.value || ''
+            const dropoff = details.find(d => d.label === 'Dropoff')?.value || ''
+
+            return (
+              <Card key={item.id} className="glass-card-accent elevated-card border border-white/20 overflow-hidden">
+                <CardContent className="p-0">
+                  {/* Item Images */}
+                  {item.images && item.images.length > 0 && (
+                    <div className="relative">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
+                        {item.images.slice(0, 4).map((imageUrl, imgIndex) => (
+                          <div
+                            key={imgIndex}
+                            className="aspect-[4/3] cursor-pointer relative overflow-hidden"
+                            onClick={() => setSelectedImageIndex({ itemIndex, imageIndex: imgIndex })}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`${item.service_name} photo ${imgIndex + 1}`}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            />
+                            {imgIndex === 3 && item.images.length > 4 && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <span className="text-white text-lg font-semibold">+{item.images.length - 4}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-white text-2xl font-bold">{formatCurrency(item.price)}</p>
+                  )}
+
+                  {/* Item Details */}
+                  <div className="p-6">
+                    <div className="flex justify-between items-start gap-4 mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-white mb-2">{displayName}</h3>
+                        {displayDescription && (
+                          <p className="text-white/70 whitespace-pre-wrap">{displayDescription}</p>
+                        )}
+                      </div>
+                      <p className="text-white text-2xl font-bold">{formatCurrency(item.price)}</p>
+                    </div>
+
+                    {/* Date */}
+                    {dateDetail && (
+                      <div className="flex items-center gap-2 mb-4 text-white/60">
+                        <Calendar className="h-4 w-4" />
+                        <span>{dateDetail}</span>
+                      </div>
+                    )}
+
+                    {/* Plane Mode - Flight Route */}
+                    {headerIcon === 'plane' && (departureCode || arrivalCode) && (
+                      <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <div className="text-center">
+                            <p className="text-3xl font-bold text-white">{departureCode || '---'}</p>
+                            <p className="text-sm text-white/60">{departureDetail || 'Departure'}</p>
+                          </div>
+                          <div className="flex-1 px-4">
+                            <div className="flex flex-col items-center">
+                              {duration && <p className="text-xs text-white/50 mb-2">{duration}</p>}
+                              <div className="flex items-center w-full">
+                                <div className="w-2 h-2 rounded-full bg-white/40"></div>
+                                <div className="flex-1 border-t-2 border-dashed border-white/20 mx-2 relative">
+                                  <Plane className="h-4 w-4 text-white/60 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-transparent" />
+                                </div>
+                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-3xl font-bold text-white">{arrivalCode || '---'}</p>
+                            <p className="text-sm text-white/60">{arrivalDetail || 'Arrival'}</p>
+                          </div>
+                        </div>
+                        {passengers && (
+                          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-white/10">
+                            <Users className="h-4 w-4 text-white/60" />
+                            <span className="text-white/80">{passengers} Passengers</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Yacht Mode - Route */}
+                    {headerIcon === 'yacht' && (departureMarina || destination) && (
+                      <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10">
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className="w-3 h-3 rounded-full bg-blue-400 border-2 border-white/20"></div>
+                            <div className="w-0.5 h-12 bg-white/20"></div>
+                            <div className="w-3 h-3 rounded-full bg-white border-2 border-white/20"></div>
+                          </div>
+                          <div className="flex-1 space-y-6">
+                            {departureMarina && (
+                              <div>
+                                <p className="text-xs text-white/50 uppercase tracking-wider">Departure Marina</p>
+                                <p className="text-white font-medium">{departureMarina}</p>
+                              </div>
+                            )}
+                            {destination && (
+                              <div>
+                                <p className="text-xs text-white/50 uppercase tracking-wider">Destination</p>
+                                <p className="text-white font-medium">{destination}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {guests && (
+                          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-white/10">
+                            <Users className="h-4 w-4 text-white/60" />
+                            <span className="text-white/80">{guests} Guests</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Car Mode - Route */}
+                    {headerIcon === 'car' && (pickup || dropoff) && (
+                      <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10">
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className="w-3 h-3 rounded-full bg-green-400 border-2 border-white/20"></div>
+                            <div className="w-0.5 h-12 bg-white/20"></div>
+                            <div className="w-3 h-3 rounded-full bg-white border-2 border-white/20"></div>
+                          </div>
+                          <div className="flex-1 space-y-6">
+                            {pickup && (
+                              <div>
+                                <p className="text-xs text-white/50 uppercase tracking-wider">Pickup</p>
+                                <p className="text-white font-medium uppercase">{pickup}</p>
+                              </div>
+                            )}
+                            {dropoff && (
+                              <div>
+                                <p className="text-xs text-white/50 uppercase tracking-wider">Dropoff</p>
+                                <p className="text-white font-medium uppercase">{dropoff}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Other Details Grid */}
+                    {details.filter(d => {
+                      if (!d.value || d.label === 'Date') return false
+                      if (headerIcon === 'plane' && ['Departure Code', 'Departure', 'Arrival Code', 'Arrival', 'Duration', 'Passengers'].includes(d.label)) return false
+                      if (headerIcon === 'yacht' && ['Departure Marina', 'Destination', 'Guests'].includes(d.label)) return false
+                      if (headerIcon === 'car' && ['Pickup', 'Dropoff'].includes(d.label)) return false
+                      return true
+                    }).length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {details
+                          .filter(d => {
+                            if (!d.value || d.label === 'Date') return false
+                            if (headerIcon === 'plane' && ['Departure Code', 'Departure', 'Arrival Code', 'Arrival', 'Duration', 'Passengers'].includes(d.label)) return false
+                            if (headerIcon === 'yacht' && ['Departure Marina', 'Destination', 'Guests'].includes(d.label)) return false
+                            if (headerIcon === 'car' && ['Pickup', 'Dropoff'].includes(d.label)) return false
+                            return true
+                          })
+                          .map((detail, idx) => (
+                            <div key={idx} className="bg-white/5 rounded-lg p-3 border border-white/10">
+                              <p className="text-xs text-white/50 uppercase tracking-wider mb-1">{detail.label}</p>
+                              <p className="text-white font-medium">{detail.value}</p>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         {/* Total */}

@@ -96,14 +96,22 @@ export default function PropertyListingPage() {
         if (clientId) {
           const supabase = createClient()
 
-          // Fetch assignment pricing settings
-          const { data: assignment } = await supabase
-            .from('client_property_assignments')
-            .select('show_monthly_rent_to_client, show_nightly_rate_to_client, show_purchase_price_to_client')
-            .eq('client_id', clientId)
-            .eq('property_id', propertyId)
-            .single()
+          // Fetch both in parallel for better performance on mobile
+          const [assignmentResult, clientResult] = await Promise.all([
+            supabase
+              .from('client_property_assignments')
+              .select('show_monthly_rent_to_client, show_nightly_rate_to_client, show_purchase_price_to_client')
+              .eq('client_id', clientId)
+              .eq('property_id', propertyId)
+              .single(),
+            supabase
+              .from('clients')
+              .select('manager_id, property_managers(id, name, email, phone, profile_picture_url)')
+              .eq('id', clientId)
+              .single()
+          ])
 
+          const assignment = assignmentResult.data
           if (assignment) {
             // Only show pricing if both the property has it enabled AND the client assignment allows it
             showMonthlyRent = showMonthlyRent && (assignment.show_monthly_rent_to_client ?? true)
@@ -111,17 +119,8 @@ export default function PropertyListingPage() {
             showPurchasePrice = showPurchasePrice && (assignment.show_purchase_price_to_client ?? true)
           }
 
-          // Fetch the client's manager (explicitly include phone)
-          const { data: clientData, error: clientError } = await supabase
-            .from('clients')
-            .select('manager_id, property_managers(id, name, email, phone, profile_picture_url)')
-            .eq('id', clientId)
-            .single()
-
-          console.log('Client data:', clientData, 'Error:', clientError)
-
-          if (clientData?.property_managers) {
-            clientManager = clientData.property_managers as any
+          if (clientResult.data?.property_managers) {
+            clientManager = clientResult.data.property_managers as any
           }
         }
 

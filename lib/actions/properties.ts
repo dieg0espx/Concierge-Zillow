@@ -274,3 +274,174 @@ export async function resetPropertyCustomization(propertyId: string) {
 
   return { success: true }
 }
+
+// Create a new property manually (without scraping) and assign to manager
+export type NewPropertyData = {
+  address: string
+  bedrooms?: string
+  bathrooms?: string
+  area?: string
+  images?: string[]
+  custom_monthly_rent?: number
+  custom_nightly_rate?: number
+  custom_purchase_price?: number
+  show_monthly_rent?: boolean
+  show_nightly_rate?: boolean
+  show_purchase_price?: boolean
+}
+
+export async function createPropertyManually(data: NewPropertyData) {
+  const supabase = await createClient()
+
+  // Get current manager profile
+  const { data: managerProfile, error: managerError } = await getCurrentManagerProfile()
+
+  if (managerError || !managerProfile) {
+    return { error: managerError || 'Manager profile not found' }
+  }
+
+  // Create the property
+  const { data: property, error: propertyError } = await supabase
+    .from('properties')
+    .insert({
+      address: data.address,
+      bedrooms: data.bedrooms || null,
+      bathrooms: data.bathrooms || null,
+      area: data.area || null,
+      images: data.images || [],
+      custom_monthly_rent: data.custom_monthly_rent || null,
+      custom_nightly_rate: data.custom_nightly_rate || null,
+      custom_purchase_price: data.custom_purchase_price || null,
+      show_monthly_rent: data.show_monthly_rent ?? false,
+      show_nightly_rate: data.show_nightly_rate ?? false,
+      show_purchase_price: data.show_purchase_price ?? false,
+      zillow_url: `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Unique placeholder
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single()
+
+  if (propertyError) {
+    console.error('Error creating property:', propertyError)
+    return { error: propertyError.message }
+  }
+
+  // Assign property to the current manager
+  const { error: assignError } = await supabase
+    .from('property_manager_assignments')
+    .insert({
+      property_id: property.id,
+      manager_id: managerProfile.id,
+    })
+
+  if (assignError) {
+    console.error('Error assigning property to manager:', assignError)
+    // Rollback property creation
+    await supabase.from('properties').delete().eq('id', property.id)
+    return { error: assignError.message }
+  }
+
+  revalidatePath('/admin/properties')
+
+  return { success: true, property }
+}
+
+// Create a new property and assign it to both manager and a specific client
+export async function createPropertyAndAssignToClient(
+  data: NewPropertyData,
+  clientId: string,
+  pricingOptions?: {
+    show_monthly_rent_to_client?: boolean
+    show_nightly_rate_to_client?: boolean
+    show_purchase_price_to_client?: boolean
+  }
+) {
+  const supabase = await createClient()
+
+  // Get current manager profile
+  const { data: managerProfile, error: managerError } = await getCurrentManagerProfile()
+
+  if (managerError || !managerProfile) {
+    return { error: managerError || 'Manager profile not found' }
+  }
+
+  // Create the property
+  const { data: property, error: propertyError } = await supabase
+    .from('properties')
+    .insert({
+      address: data.address,
+      bedrooms: data.bedrooms || null,
+      bathrooms: data.bathrooms || null,
+      area: data.area || null,
+      images: data.images || [],
+      custom_monthly_rent: data.custom_monthly_rent || null,
+      custom_nightly_rate: data.custom_nightly_rate || null,
+      custom_purchase_price: data.custom_purchase_price || null,
+      show_monthly_rent: data.show_monthly_rent ?? false,
+      show_nightly_rate: data.show_nightly_rate ?? false,
+      show_purchase_price: data.show_purchase_price ?? false,
+      zillow_url: `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Unique placeholder
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single()
+
+  if (propertyError) {
+    console.error('Error creating property:', propertyError)
+    return { error: propertyError.message }
+  }
+
+  // Assign property to the current manager
+  const { error: managerAssignError } = await supabase
+    .from('property_manager_assignments')
+    .insert({
+      property_id: property.id,
+      manager_id: managerProfile.id,
+    })
+
+  if (managerAssignError) {
+    console.error('Error assigning property to manager:', managerAssignError)
+    // Rollback property creation
+    await supabase.from('properties').delete().eq('id', property.id)
+    return { error: managerAssignError.message }
+  }
+
+  // Get the next position for the client's properties
+  const { data: existingAssignments } = await supabase
+    .from('client_property_assignments')
+    .select('position')
+    .eq('client_id', clientId)
+    .order('position', { ascending: false })
+    .limit(1)
+
+  const nextPosition = existingAssignments && existingAssignments.length > 0
+    ? (existingAssignments[0].position || 0) + 1
+    : 0
+
+  // Assign property to the client
+  const { error: clientAssignError } = await supabase
+    .from('client_property_assignments')
+    .insert({
+      client_id: clientId,
+      property_id: property.id,
+      position: nextPosition,
+      show_monthly_rent_to_client: pricingOptions?.show_monthly_rent_to_client ?? true,
+      show_nightly_rate_to_client: pricingOptions?.show_nightly_rate_to_client ?? true,
+      show_purchase_price_to_client: pricingOptions?.show_purchase_price_to_client ?? true,
+    })
+
+  if (clientAssignError) {
+    console.error('Error assigning property to client:', clientAssignError)
+    // Note: We don't rollback here because the property was already created and assigned to manager
+    // This is acceptable - the property exists, just wasn't assigned to this client
+    return { error: clientAssignError.message }
+  }
+
+  revalidatePath('/admin/properties')
+  revalidatePath(`/admin/client/${clientId}`)
+  revalidatePath(`/client/${clientId}`)
+
+  return { success: true, property }
+}

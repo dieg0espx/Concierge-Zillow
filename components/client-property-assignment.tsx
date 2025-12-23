@@ -25,7 +25,12 @@ import {
   bulkRemovePropertiesFromClient,
   ClientPricingOptions,
 } from '@/lib/actions/clients'
-import { Search, Home, Plus, X, Loader2, Settings, Check, GripVertical, ChevronUp, ChevronDown, CheckSquare, Square } from 'lucide-react'
+import { createPropertyAndAssignToClient, NewPropertyData } from '@/lib/actions/properties'
+import { Textarea } from '@/components/ui/textarea'
+import { Search, Home, Plus, X, Loader2, Settings, Check, GripVertical, ChevronUp, ChevronDown, CheckSquare, Square, Upload, DollarSign, Link2, Edit3 } from 'lucide-react'
+import { saveProperty } from '@/lib/supabase'
+import { assignPropertyToManagers } from '@/lib/actions/properties'
+import { getCurrentManagerProfile } from '@/lib/actions/clients'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
 type Property = {
@@ -85,6 +90,29 @@ export function ClientPropertyAssignment({
   // Bulk selection state
   const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set())
   const [isBulkMode, setIsBulkMode] = useState(false)
+
+  // New property modal state
+  const [showNewPropertyModal, setShowNewPropertyModal] = useState(false)
+  const [isCreatingProperty, setIsCreatingProperty] = useState(false)
+  const [inputMode, setInputMode] = useState<'scrape' | 'manual'>('scrape')
+  const [zillowUrl, setZillowUrl] = useState('')
+  const [newPropertyData, setNewPropertyData] = useState<NewPropertyData>({
+    address: '',
+    bedrooms: '',
+    bathrooms: '',
+    area: '',
+    images: [],
+    custom_monthly_rent: undefined,
+    custom_nightly_rate: undefined,
+    custom_purchase_price: undefined,
+    show_monthly_rent: false,
+    show_nightly_rate: false,
+    show_purchase_price: false,
+  })
+  const [manualDescription, setManualDescription] = useState('')
+  const [manualImageUrls, setManualImageUrls] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setIsMounted(true)
@@ -374,6 +402,430 @@ export function ClientPropertyAssignment({
     setShowPricingModal(property.id)
   }
 
+  // New property handlers
+  const handleOpenNewPropertyModal = () => {
+    setNewPropertyData({
+      address: '',
+      bedrooms: '',
+      bathrooms: '',
+      area: '',
+      images: [],
+      custom_monthly_rent: undefined,
+      custom_nightly_rate: undefined,
+      custom_purchase_price: undefined,
+      show_monthly_rent: false,
+      show_nightly_rate: false,
+      show_purchase_price: false,
+    })
+    setZillowUrl('')
+    setManualDescription('')
+    setManualImageUrls('')
+    setInputMode('scrape')
+    setShowNewPropertyModal(true)
+  }
+
+  // Scrape from Zillow
+  const handleScrapeProperty = async () => {
+    if (!zillowUrl.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a Zillow URL',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsCreatingProperty(true)
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_HASDATA_API_KEY
+      if (!apiKey) {
+        throw new Error('HasData API key is not configured')
+      }
+
+      const response = await fetch('https://api.hasdata.com/scrape/zillow/property', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey
+        },
+        body: JSON.stringify({
+          url: zillowUrl.trim(),
+          scrape_description: true
+        })
+      })
+
+      if (!response.ok) {
+        const responseText = await response.text()
+        let errorMessage = 'Unknown error occurred'
+
+        if (response.status === 400) {
+          errorMessage = 'Invalid Zillow URL or property not found'
+        } else if (response.status === 401 || response.status === 403) {
+          errorMessage = 'API authentication failed'
+        } else if (response.status === 429) {
+          errorMessage = 'Rate limit exceeded. Please wait and try again.'
+        }
+
+        throw new Error(errorMessage)
+      }
+
+      const data = await response.json()
+      const propertyData = data.property || data
+
+      // Extract address
+      let address = ""
+      if (propertyData.addressRaw) {
+        address = propertyData.addressRaw
+      } else if (typeof propertyData.address === 'object' && propertyData.address) {
+        const addr = propertyData.address
+        const parts = [addr.street, addr.city, `${addr.state} ${addr.zipcode}`].filter(Boolean)
+        address = parts.join(', ')
+      } else if (typeof propertyData.address === 'string') {
+        address = propertyData.address
+      } else if (propertyData.fullAddress) {
+        address = propertyData.fullAddress
+      }
+
+      if (!address) {
+        address = "Address not available"
+      }
+
+      // Check for multi-unit building
+      const hasListings = Array.isArray(propertyData.listings) && propertyData.listings.length > 0
+      const hasFloorPlans = Array.isArray(propertyData.floorPlans) && propertyData.floorPlans.length > 0
+      const isMultiUnit = hasListings || hasFloorPlans
+      const unitData = hasListings ? propertyData.listings : (hasFloorPlans ? propertyData.floorPlans : [])
+
+      let bedrooms = ""
+      let bathrooms = ""
+      let area = ""
+
+      if (isMultiUnit && unitData.length > 0) {
+        const beds = unitData.map((l: any) => l.bedrooms || l.beds).filter((b: any) => b !== null && b !== undefined).map((b: any) => parseInt(b)).filter((b: number) => !isNaN(b))
+        if (beds.length > 0) {
+          const minBeds = Math.min(...beds)
+          const maxBeds = Math.max(...beds)
+          bedrooms = minBeds === maxBeds ? minBeds.toString() : `${minBeds}-${maxBeds}`
+        }
+
+        const baths = unitData.map((l: any) => l.bathrooms || l.baths).filter((b: any) => b !== null && b !== undefined).map((b: any) => parseFloat(b)).filter((b: number) => !isNaN(b))
+        if (baths.length > 0) {
+          const minBaths = Math.min(...baths)
+          const maxBaths = Math.max(...baths)
+          bathrooms = minBaths === maxBaths ? minBaths.toString() : `${minBaths}-${maxBaths}`
+        }
+
+        const areas = unitData.map((l: any) => l.livingArea || l.area || l.sqft).filter((a: any) => a !== null && a !== undefined && a !== 0).map((a: any) => parseInt(a)).filter((a: number) => !isNaN(a) && a > 0)
+        if (areas.length > 0) {
+          const minArea = Math.min(...areas)
+          const maxArea = Math.max(...areas)
+          area = minArea === maxArea ? minArea.toString() : `${minArea}-${maxArea}`
+        }
+      } else {
+        bedrooms = (propertyData.bedrooms || propertyData.beds || "").toString()
+        bathrooms = (propertyData.bathrooms || propertyData.baths || "").toString()
+        area = (propertyData.livingArea || propertyData.area || "").toString()
+      }
+
+      // Get images
+      let zillowImageUrls: string[] = []
+      const rawPhotos = propertyData.photos || propertyData.images || []
+      if (rawPhotos.length > 0) {
+        if (typeof rawPhotos[0] === 'string') {
+          zillowImageUrls = rawPhotos
+        } else if (typeof rawPhotos[0] === 'object') {
+          zillowImageUrls = rawPhotos.map((p: any) => p.url || p.href || p.src).filter(Boolean)
+        }
+      }
+      if (propertyData.image && !zillowImageUrls.includes(propertyData.image)) {
+        zillowImageUrls.unshift(propertyData.image)
+      }
+
+      // Upload images to Cloudinary
+      let cloudinaryImageUrls: string[] = []
+      if (zillowImageUrls.length > 0) {
+        try {
+          const uploadResponse = await fetch('/api/upload-images', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageUrls: zillowImageUrls,
+              propertyAddress: address,
+            }),
+          })
+
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            cloudinaryImageUrls = uploadData.urls || []
+          }
+
+          if (cloudinaryImageUrls.length === 0) {
+            cloudinaryImageUrls = zillowImageUrls
+          }
+        } catch (uploadError) {
+          console.error('Error uploading images:', uploadError)
+          cloudinaryImageUrls = zillowImageUrls
+        }
+      }
+
+      // Save the property
+      const newProperty = {
+        address,
+        bedrooms,
+        bathrooms,
+        area,
+        zillow_url: zillowUrl.trim(),
+        images: cloudinaryImageUrls,
+        description: propertyData.description || null,
+        show_monthly_rent: newPropertyData.show_monthly_rent,
+        custom_monthly_rent: newPropertyData.custom_monthly_rent || null,
+        show_nightly_rate: newPropertyData.show_nightly_rate,
+        custom_nightly_rate: newPropertyData.custom_nightly_rate || null,
+        show_purchase_price: newPropertyData.show_purchase_price,
+        custom_purchase_price: newPropertyData.custom_purchase_price || null,
+      }
+
+      const savedProperty = await saveProperty(newProperty)
+
+      // Get current manager and assign property
+      const { data: managerProfile } = await getCurrentManagerProfile()
+      if (managerProfile && savedProperty.id) {
+        await assignPropertyToManagers(savedProperty.id, [managerProfile.id])
+      }
+
+      // Assign to client
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      // Get next position
+      const { data: existingAssignments } = await supabase
+        .from('client_property_assignments')
+        .select('position')
+        .eq('client_id', clientId)
+        .order('position', { ascending: false })
+        .limit(1)
+
+      const nextPosition = existingAssignments && existingAssignments.length > 0
+        ? (existingAssignments[0].position || 0) + 1
+        : 0
+
+      await supabase.from('client_property_assignments').insert({
+        client_id: clientId,
+        property_id: savedProperty.id,
+        position: nextPosition,
+        show_monthly_rent_to_client: newPropertyData.show_monthly_rent ?? true,
+        show_nightly_rate_to_client: newPropertyData.show_nightly_rate ?? true,
+        show_purchase_price_to_client: newPropertyData.show_purchase_price ?? true,
+      })
+
+      // Generate AI description
+      try {
+        await fetch('/api/generate-description', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            propertyId: savedProperty.id,
+            address,
+            bedrooms,
+            bathrooms,
+            area,
+          }),
+        })
+      } catch (descError) {
+        console.warn('AI description generation failed:', descError)
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Property scraped and assigned to client',
+      })
+      setShowNewPropertyModal(false)
+      router.refresh()
+    } catch (error) {
+      console.error('Error scraping property:', error)
+      toast({
+        title: 'Failed to Scrape Property',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCreatingProperty(false)
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingImage(true)
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', 'concierge')
+        formData.append('folder', 'concierge')
+
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/dku1gnuat/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`)
+        }
+
+        const data = await response.json()
+        return data.secure_url
+      })
+
+      const uploadedUrls = await Promise.all(uploadPromises)
+
+      setNewPropertyData(prev => ({
+        ...prev,
+        images: [...(prev.images || []), ...uploadedUrls],
+      }))
+
+      toast({
+        title: 'Images uploaded',
+        description: `Successfully uploaded ${uploadedUrls.length} image(s)`,
+      })
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload images',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingImage(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemoveImage = (imageUrl: string) => {
+    setNewPropertyData(prev => ({
+      ...prev,
+      images: prev.images?.filter(img => img !== imageUrl) || [],
+    }))
+  }
+
+  const handleCreateProperty = async () => {
+    if (!newPropertyData.address.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an address for the property',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsCreatingProperty(true)
+
+    try {
+      // Parse images from comma-separated URLs if provided in manual mode
+      let allImages = [...(newPropertyData.images || [])]
+      if (manualImageUrls.trim()) {
+        const urlImages = manualImageUrls
+          .split(',')
+          .map(url => url.trim())
+          .filter(url => url.length > 0)
+        allImages = [...allImages, ...urlImages]
+      }
+
+      // Save the property with all data
+      const newProperty = {
+        address: newPropertyData.address,
+        bedrooms: newPropertyData.bedrooms || "",
+        bathrooms: newPropertyData.bathrooms || "",
+        area: newPropertyData.area || "",
+        zillow_url: "",
+        images: allImages,
+        description: manualDescription || undefined,
+        show_monthly_rent: newPropertyData.show_monthly_rent,
+        custom_monthly_rent: newPropertyData.custom_monthly_rent || null,
+        show_nightly_rate: newPropertyData.show_nightly_rate,
+        custom_nightly_rate: newPropertyData.custom_nightly_rate || null,
+        show_purchase_price: newPropertyData.show_purchase_price,
+        custom_purchase_price: newPropertyData.custom_purchase_price || null,
+      }
+
+      const savedProperty = await saveProperty(newProperty)
+
+      // Get current manager and assign property
+      const { data: managerProfile } = await getCurrentManagerProfile()
+      if (managerProfile && savedProperty.id) {
+        await assignPropertyToManagers(savedProperty.id, [managerProfile.id])
+      }
+
+      // Assign to client
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      // Get next position
+      const { data: existingAssignments } = await supabase
+        .from('client_property_assignments')
+        .select('position')
+        .eq('client_id', clientId)
+        .order('position', { ascending: false })
+        .limit(1)
+
+      const nextPosition = existingAssignments && existingAssignments.length > 0
+        ? (existingAssignments[0].position || 0) + 1
+        : 0
+
+      await supabase.from('client_property_assignments').insert({
+        client_id: clientId,
+        property_id: savedProperty.id,
+        position: nextPosition,
+        show_monthly_rent_to_client: newPropertyData.show_monthly_rent ?? true,
+        show_nightly_rate_to_client: newPropertyData.show_nightly_rate ?? true,
+        show_purchase_price_to_client: newPropertyData.show_purchase_price ?? true,
+      })
+
+      // Generate AI description if no description was provided
+      if (!manualDescription && savedProperty.id) {
+        try {
+          await fetch('/api/generate-description', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              propertyId: savedProperty.id,
+              address: newPropertyData.address,
+              bedrooms: newPropertyData.bedrooms,
+              bathrooms: newPropertyData.bathrooms,
+              area: newPropertyData.area,
+            }),
+          })
+        } catch (descError) {
+          console.warn('AI description generation failed:', descError)
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Property created and assigned to client',
+      })
+      setShowNewPropertyModal(false)
+      router.refresh()
+    } catch (error) {
+      console.error('Error creating property:', error)
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCreatingProperty(false)
+    }
+  }
+
   const handleSavePricing = async () => {
     if (!showPricingModal || showPricingModal === 'bulk') return
 
@@ -496,6 +948,333 @@ export function ClientPropertyAssignment({
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 isBulkModal ? 'Assign Properties' : isEditMode ? 'Save Changes' : 'Assign Property'
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  // New property modal component
+  const renderNewPropertyModal = () => {
+    if (!isMounted || !showNewPropertyModal) return null
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="bg-zinc-900 border border-white/20 rounded-lg p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Add New Property</h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowNewPropertyModal(false)}
+              className="hover:bg-white/10 text-white"
+              disabled={isCreatingProperty}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Mode Toggle */}
+          <div className="flex gap-2 mb-6">
+            <Button
+              variant={inputMode === 'scrape' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setInputMode('scrape')}
+              className={inputMode === 'scrape' ? 'bg-white text-black' : 'border-white/30 text-white hover:bg-white/10'}
+              disabled={isCreatingProperty}
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              Scrape from Zillow
+            </Button>
+            <Button
+              variant={inputMode === 'manual' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setInputMode('manual')}
+              className={inputMode === 'manual' ? 'bg-white text-black' : 'border-white/30 text-white hover:bg-white/10'}
+              disabled={isCreatingProperty}
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              Manual Entry
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {inputMode === 'scrape' ? (
+              /* Scrape Mode */
+              <>
+                <div>
+                  <Label htmlFor="zillow_url" className="text-white mb-2 block">
+                    Zillow Property URL <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="zillow_url"
+                    value={zillowUrl}
+                    onChange={(e) => setZillowUrl(e.target.value)}
+                    placeholder="https://www.zillow.com/homedetails/..."
+                    className="bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                    disabled={isCreatingProperty}
+                  />
+                  <p className="text-xs text-white/50 mt-2">
+                    Paste a Zillow property URL to automatically fetch details, images, and description
+                  </p>
+                </div>
+              </>
+            ) : (
+              /* Manual Mode */
+              <>
+                {/* Address */}
+                <div>
+                  <Label htmlFor="address" className="text-white mb-2 block">
+                    Address <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="address"
+                    value={newPropertyData.address}
+                    onChange={(e) => setNewPropertyData(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="123 Main St, Miami, FL 33101"
+                    className="bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                    disabled={isCreatingProperty}
+                  />
+                </div>
+
+                {/* Bedrooms, Bathrooms, Area */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label htmlFor="bedrooms" className="text-white mb-2 block">Bedrooms</Label>
+                    <Input
+                      id="bedrooms"
+                      value={newPropertyData.bedrooms}
+                      onChange={(e) => setNewPropertyData(prev => ({ ...prev, bedrooms: e.target.value }))}
+                      placeholder="e.g., 3"
+                      className="bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                      disabled={isCreatingProperty}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bathrooms" className="text-white mb-2 block">Bathrooms</Label>
+                    <Input
+                      id="bathrooms"
+                      value={newPropertyData.bathrooms}
+                      onChange={(e) => setNewPropertyData(prev => ({ ...prev, bathrooms: e.target.value }))}
+                      placeholder="e.g., 2"
+                      className="bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                      disabled={isCreatingProperty}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="area" className="text-white mb-2 block">Sq Ft</Label>
+                    <Input
+                      id="area"
+                      value={newPropertyData.area}
+                      onChange={(e) => setNewPropertyData(prev => ({ ...prev, area: e.target.value }))}
+                      placeholder="e.g., 2000"
+                      className="bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                      disabled={isCreatingProperty}
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label htmlFor="description" className="text-white mb-2 block">Description (Optional)</Label>
+                  <Textarea
+                    id="description"
+                    value={manualDescription}
+                    onChange={(e) => setManualDescription(e.target.value)}
+                    placeholder="Property description..."
+                    className="bg-white/5 border-white/30 text-white placeholder:text-white/40 min-h-[80px]"
+                    disabled={isCreatingProperty}
+                  />
+                  <p className="text-xs text-white/50 mt-1">Leave blank to auto-generate with AI</p>
+                </div>
+
+                {/* Images - Upload */}
+                <div>
+                  <Label className="text-white mb-2 block">Images</Label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage || isCreatingProperty}
+                    className="w-full border-white/30 text-white hover:bg-white/10"
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Images
+                      </>
+                    )}
+                  </Button>
+                  {newPropertyData.images && newPropertyData.images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {newPropertyData.images.map((img, idx) => (
+                        <div key={idx} className="relative w-16 h-16 rounded overflow-hidden group">
+                          <img src={img} alt={`Property ${idx + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(img)}
+                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                            disabled={isCreatingProperty}
+                          >
+                            <X className="h-4 w-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Image URLs */}
+                <div>
+                  <Label htmlFor="image_urls" className="text-white mb-2 block">Or paste Image URLs</Label>
+                  <Textarea
+                    id="image_urls"
+                    value={manualImageUrls}
+                    onChange={(e) => setManualImageUrls(e.target.value)}
+                    placeholder="Comma-separated image URLs..."
+                    className="bg-white/5 border-white/30 text-white placeholder:text-white/40 min-h-[60px]"
+                    disabled={isCreatingProperty}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Pricing Section - shown for both modes */}
+            <div className="border-t border-white/20 pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <DollarSign className="h-4 w-4 text-white/60" />
+                <Label className="text-white">Pricing Options</Label>
+              </div>
+
+              {/* Monthly Rent */}
+              <div className="flex items-center gap-3 mb-3">
+                <Checkbox
+                  id="show_monthly_rent_new"
+                  checked={newPropertyData.show_monthly_rent}
+                  onCheckedChange={(checked) =>
+                    setNewPropertyData(prev => ({ ...prev, show_monthly_rent: !!checked }))
+                  }
+                  className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                  disabled={isCreatingProperty}
+                />
+                <Label htmlFor="show_monthly_rent_new" className="text-white cursor-pointer flex-1">
+                  Monthly Rent
+                </Label>
+                {newPropertyData.show_monthly_rent && (
+                  <Input
+                    type="number"
+                    value={newPropertyData.custom_monthly_rent || ''}
+                    onChange={(e) => setNewPropertyData(prev => ({
+                      ...prev,
+                      custom_monthly_rent: e.target.value ? Number(e.target.value) : undefined
+                    }))}
+                    placeholder="$0"
+                    className="w-28 bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                    disabled={isCreatingProperty}
+                  />
+                )}
+              </div>
+
+              {/* Nightly Rate */}
+              <div className="flex items-center gap-3 mb-3">
+                <Checkbox
+                  id="show_nightly_rate_new"
+                  checked={newPropertyData.show_nightly_rate}
+                  onCheckedChange={(checked) =>
+                    setNewPropertyData(prev => ({ ...prev, show_nightly_rate: !!checked }))
+                  }
+                  className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                  disabled={isCreatingProperty}
+                />
+                <Label htmlFor="show_nightly_rate_new" className="text-white cursor-pointer flex-1">
+                  Nightly Rate
+                </Label>
+                {newPropertyData.show_nightly_rate && (
+                  <Input
+                    type="number"
+                    value={newPropertyData.custom_nightly_rate || ''}
+                    onChange={(e) => setNewPropertyData(prev => ({
+                      ...prev,
+                      custom_nightly_rate: e.target.value ? Number(e.target.value) : undefined
+                    }))}
+                    placeholder="$0"
+                    className="w-28 bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                    disabled={isCreatingProperty}
+                  />
+                )}
+              </div>
+
+              {/* Purchase Price */}
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="show_purchase_price_new"
+                  checked={newPropertyData.show_purchase_price}
+                  onCheckedChange={(checked) =>
+                    setNewPropertyData(prev => ({ ...prev, show_purchase_price: !!checked }))
+                  }
+                  className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                  disabled={isCreatingProperty}
+                />
+                <Label htmlFor="show_purchase_price_new" className="text-white cursor-pointer flex-1">
+                  Purchase Price
+                </Label>
+                {newPropertyData.show_purchase_price && (
+                  <Input
+                    type="number"
+                    value={newPropertyData.custom_purchase_price || ''}
+                    onChange={(e) => setNewPropertyData(prev => ({
+                      ...prev,
+                      custom_purchase_price: e.target.value ? Number(e.target.value) : undefined
+                    }))}
+                    placeholder="$0"
+                    className="w-28 bg-white/5 border-white/30 text-white placeholder:text-white/40"
+                    disabled={isCreatingProperty}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="ghost"
+              onClick={() => setShowNewPropertyModal(false)}
+              className="text-white hover:bg-white/10"
+              disabled={isCreatingProperty}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={inputMode === 'scrape' ? handleScrapeProperty : handleCreateProperty}
+              disabled={isCreatingProperty || (inputMode === 'scrape' ? !zillowUrl.trim() : !newPropertyData.address.trim())}
+              className="bg-white text-black hover:bg-white/90"
+            >
+              {isCreatingProperty ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {inputMode === 'scrape' ? 'Scraping...' : 'Creating...'}
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {inputMode === 'scrape' ? 'Scrape & Add' : 'Create Property'}
+                </>
               )}
             </Button>
           </div>
@@ -657,24 +1436,34 @@ export function ClientPropertyAssignment({
                 {availableProperties.length} {availableProperties.length === 1 ? 'property' : 'properties'} available
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              variant={isBulkMode ? 'default' : 'outline'}
-              onClick={toggleBulkMode}
-              className={isBulkMode ? 'bg-blue-500 hover:bg-blue-600' : 'border-white/30 text-white hover:bg-white/10'}
-            >
-              {isBulkMode ? (
-                <>
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Bulk Mode
-                </>
-              ) : (
-                <>
-                  <Square className="h-4 w-4 mr-2" />
-                  Bulk Select
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleOpenNewPropertyModal}
+                className="bg-white text-black hover:bg-white/90"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Property
+              </Button>
+              <Button
+                size="sm"
+                variant={isBulkMode ? 'default' : 'outline'}
+                onClick={toggleBulkMode}
+                className={isBulkMode ? 'bg-blue-500 hover:bg-blue-600' : 'border-white/30 text-white hover:bg-white/10'}
+              >
+                {isBulkMode ? (
+                  <>
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Bulk Mode
+                  </>
+                ) : (
+                  <>
+                    <Square className="h-4 w-4 mr-2" />
+                    Bulk Select
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -806,6 +1595,7 @@ export function ClientPropertyAssignment({
       </Card>
 
       {renderPricingModal()}
+      {renderNewPropertyModal()}
     </div>
   )
 }
